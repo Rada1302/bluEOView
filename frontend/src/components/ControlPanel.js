@@ -1,12 +1,10 @@
 import React from 'react';
 import {
   Box,
-  Typography,
   FormControl,
   MenuItem,
   Select,
   IconButton,
-  Slider,
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
@@ -87,8 +85,6 @@ const ControlPanel = ({
   onVariableChange,
   feature,
   onFeatureChange,
-  time,
-  onTimeChange,
   openInfoModal,
   tutorialStep,
 }) => {
@@ -113,13 +109,7 @@ const ControlPanel = ({
         backgroundColor: 'rgba(0, 0, 0, 0.25)',
         backdropFilter: 'blur(8px)',
         borderRadius: 1,
-        border: [6].includes(tutorialStep) ? '4px solid #4FC3F7' : 'none',
-        boxShadow: [6].includes(tutorialStep)
-          ? '0 0 30px 10px rgba(79,195,247,0.6)'
-          : 'none',
-        animation: [6].includes(tutorialStep) ? 'pulse 1.5s infinite' : 'none',
         position: 'relative',
-        zIndex: [6].includes(tutorialStep) ? 3000 : 'auto',
       }}
     >
       {/* Variable (Mean or SD) */}
