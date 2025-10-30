@@ -5,7 +5,6 @@ import DataPanel from './components/DataPanel';
 import Footer from './components/Footer';
 import ControlPanel from './components/ControlPanel';
 import InfoModal from './components/InfoModal';
-import Tutorial from './components/Tutorial';
 import debounce from 'lodash/debounce';
 import './App.css';
 import { Box, Typography, Divider, IconButton, Collapse, Button } from '@mui/material';
@@ -16,7 +15,6 @@ import {
   rcpScenarios,
   earthModels,
   infoMessages,
-  infoMessagesShort,
   shortProjectDescription,
   projectDescription,
 } from './constants';
@@ -35,10 +33,6 @@ const App = () => {
     rcp: rcpScenarios[0],
     model: earthModels[0],
   };
-
-  // Tutorial state
-  const [tutorialActive, setTutorialActive] = useState(false);
-  const [tutorialStep, setTutorialStep] = useState(0);
 
   // Top-level UI / modal state
   const [infoModalOpen, setInfoModalOpen] = useState(false);
@@ -88,7 +82,6 @@ const App = () => {
 
   // Info modal helpers
   const openInfoModal = (title, key) => {
-    setInfoModalShortText(infoMessagesShort[key] ?? 'No short description available');
     setInfoModalText(infoMessages[key] ?? 'No information available');
     setInfoModalTitle(title);
     setInfoModalOpen(true);
@@ -136,17 +129,6 @@ const App = () => {
 
   return (
     <Box className="App" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {/* Tutorial Overlay */}
-      <Tutorial
-        start={tutorialActive}
-        onFinish={() => {
-          setTutorialActive(false);
-          setTutorialStep(0);
-        }}
-        panel1Year={panel1.year}
-        setPanel1Year={(y) => handleYearChange(setPanel1, setPanel2, y)}
-        setTutorialStep={setTutorialStep}
-      />
 
       {/* Project Explanation Modal */}
       <InfoModal
@@ -160,13 +142,6 @@ const App = () => {
 
       {/* Header */}
       <Box component="header" sx={{ backgroundColor: 'transparent', mt: 2, px: 4, position: 'relative', textAlign: 'center' }}>
-        {/* Start Tutorial Button */}
-        <Box sx={{ position: 'absolute', top: '30%', left: 16, zIndex: 1500, transform: 'translateY(-50%)' }}>
-          <Button
-            variant="outlined"
-            color="white"
-            onClick={() => setTutorialActive(true)}>Start Tutorial</Button>
-        </Box>
         <Typography variant="h1" sx={{ fontSize: '3.5rem', fontWeight: 'bold', color: 'white' }}>BluEOView</Typography>
         <Typography variant="h6" sx={{ fontSize: '1.25rem', color: 'white', mt: 1 }}>
           Visualisation of CEPHALOPOD
@@ -201,7 +176,6 @@ const App = () => {
           <DataPanel
             panel={panel1}
             setPanel={setPanel1}
-            tutorialStep={tutorialStep}
             debouncedYear={debouncedYear1}
             debouncedUpdateYear={debouncedUpdateYear1}
             setSelectedPoint={setSelectedPoint}
@@ -260,10 +234,7 @@ const App = () => {
                   gap: 1,
                   justifyContent: 'space-between',
                   mb: 1,
-                  border: [4, 5].includes(tutorialStep) ? '4px solid #4FC3F7' : 'none',
-                  boxShadow: [4, 5].includes(tutorialStep) ? '0 0 30px 10px rgba(79,195,247,0.6)' : 'none',
-                  animation: [4, 5].includes(tutorialStep) ? 'pulse 1.5s infinite' : 'none',
-                  zIndex: [4, 5].includes(tutorialStep) ? 3000 : 'auto',
+                  zIndex: 'auto',
                   position: 'relative',
                 }}
               >
@@ -287,7 +258,6 @@ const App = () => {
                     diversityIndices={diversityIndices}
                     environmentalParameters={environmentalParameters}
                     openInfoModal={openInfoModal}
-                    tutorialStep={tutorialStep}
                   />
                 </Box>
 
@@ -312,7 +282,6 @@ const App = () => {
                     diversityIndices={diversityIndices}
                     environmentalParameters={environmentalParameters}
                     openInfoModal={openInfoModal}
-                    tutorialStep={tutorialStep === 6 ? null : tutorialStep}
                   />
                 </Box>
               </Box>
@@ -322,11 +291,8 @@ const App = () => {
           <Box
             sx={{
               flexShrink: 0,
-              border: [8].includes(tutorialStep) ? '4px solid #4FC3F7' : 'none',
-              boxShadow: [8].includes(tutorialStep) ? '0 0 30px 10px rgba(79,195,247,0.6)' : 'none',
-              animation: [8].includes(tutorialStep) ? 'pulse 1.5s infinite' : 'none',
               position: 'relative',
-              zIndex: [8].includes(tutorialStep) ? 3000 : 'auto',
+              zIndex: 'auto',
             }}
           >
             {/* Combined line plot */}
@@ -359,7 +325,6 @@ const App = () => {
           <DataPanel
             panel={panel2}
             setPanel={setPanel2}
-            tutorialStep={tutorialStep === 1 ? 1 : null}
             debouncedYear={debouncedYear2}
             debouncedUpdateYear={debouncedUpdateYear2}
             setSelectedPoint={setSelectedPoint}

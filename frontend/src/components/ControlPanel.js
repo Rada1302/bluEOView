@@ -81,24 +81,16 @@ const LabeledSelect = ({
 );
 
 const ControlPanel = ({
-  variable,
-  onVariableChange,
   feature,
   onFeatureChange,
   openInfoModal,
-  tutorialStep,
 }) => {
   // Dropdown options
-  const variableOptions = [
-    { label: 'Mean Values', value: 'mean_values' },
-    { label: 'Standard Deviation', value: 'sd_values' },
-  ];
-
   const featureOptions = [
-    { label: 'Feature 0', value: 0 },
-    { label: 'Feature 1', value: 1 },
-    { label: 'Feature 2', value: 2 },
-    { label: 'Feature 3', value: 3 },
+    { label: 'Shannon Diversity Index', value: 'a_shannon' },
+    { label: 'Species Richness', value: 'a_richness' },
+    { label: 'Evenness Index', value: 'a_evenness' },
+    { label: 'Inverse Simpson Index', value: 'a_invsimpson' },
   ];
 
   return (
@@ -112,25 +104,14 @@ const ControlPanel = ({
         position: 'relative',
       }}
     >
-      {/* Variable (Mean or SD) */}
-      <LabeledSelect
-        label="Variable"
-        id="variable"
-        value={variable}
-        options={variableOptions}
-        onChange={onVariableChange}
-        infoText="Select whether to view mean values or standard deviation."
-        openInfoModal={openInfoModal}
-      />
-
-      {/* Feature (0–3) */}
+      {/* Feature Selection */}
       <LabeledSelect
         label="Feature"
         id="feature"
         value={feature}
         options={featureOptions}
         onChange={onFeatureChange}
-        infoText="Choose which feature (0–3) to visualize."
+        infoText="Choose which feature to visualize."
         openInfoModal={openInfoModal}
       />
       
