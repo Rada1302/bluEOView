@@ -18,43 +18,36 @@ def add_header(response):
     response.cache_control.no_store = True  # Disable caching for all responses
     return response
 
-def read_netcdf(file_path: str, variable_name: str, year: int = None):
-    if year is None:
-        year = 2012
-
-    file_lock.acquire()  # Acquire the lock to handle file concurrency
+def read_netcdf(file_path: str, variable_name: str, time_index: int = 0, feature_index: int = 0):
+    file_lock.acquire()
     try:
-        # Open the dataset with Dask chunking
-        with xr.open_dataset(file_path, chunks={'time': 10}) as ds:
-            lats = ds['lat']
-            lons = ds['lon']
+        with xr.open_dataset(file_path) as ds:
+            lats = ds['latitude']
+            lons = ds['longitude']
 
-            # Calculate min and max values across all years, lazily, and compute them
-            min_value = ds[variable_name].min().compute()
-            max_value = ds[variable_name].max().compute()
-            if 'div' in variable_name:
-                abs_value = max(abs(min_value), abs(max_value))
-                min_value = -abs_value
-                max_value = abs_value
+            # Choose variable (mean or sd)
+            variable_data = ds[variable_name]
 
-            # Load the data for the specified year and compute the variable array
-            variable = ds[variable_name][year - 2012, :, :].compute().values
-            variable = np.where(np.isnan(variable), None, variable.round(2))
-            colorscale = 'Picnic' if 'div' in variable_name else 'Viridis'
+            # Select slice (feature, time)
+            var = variable_data.isel(feature=feature_index, time=time_index)
+
+            # Compute stats for color scaling
+            min_value = float(var.min().values)
+            max_value = float(var.max().values)
 
             data = {
                 'lats': lats.values.tolist(),
                 'lons': lons.values.tolist(),
-                'variable': variable.tolist(),
-                'colorscale': colorscale,
-                'minValue': min_value.round(2).item(),
-                'maxValue': max_value.round(2).item()
+                'variable': np.where(np.isnan(var), None, var.round(3)).tolist(),
+                'colorscale': 'Viridis',
+                'minValue': round(min_value, 3),
+                'maxValue': round(max_value, 3),
+                'feature': ds['mean_values'].attrs.get('feature_names', '').split(',')[feature_index]
             }
     finally:
-        file_lock.release()  # Always release the lock after the operation is done
+        file_lock.release()
 
     return data
-
 
 def get_timeseries(
     file_path: str,
@@ -223,31 +216,21 @@ def get_file_and_variable(index:str, group:str, scenario:str, model:str):
 
 @app.route('/api/globe-data', methods=['GET'])
 def get_globe_data():
-    # Determine source type: 'env' for environmental, 'plankton' for diversity data
-    source = request.args.get('source', 'env')
-    year = request.args.get('year', type=int)
-    scenario = request.args.get('scenario', type=str)
-    model = request.args.get('model', type=str)
+    file_path = "output_diversity.nc"
+    variable_name = request.args.get('variable', 'mean_values')  # mean_values or sd_values
+    time_index = request.args.get('time', default=0, type=int)    # 0–12
+    feature_index = request.args.get('feature', default=0, type=int)  # 0–3
 
-    if source == 'plankton':
-        # Diversity/plankton data uses 'index' and 'group'
-        index = request.args.get('index', type=str)
-        group = request.args.get('group', type=str)
-        file_path, variable = get_file_and_variable(index, group, scenario, model)
-    else:
-        # Environmental data uses 'index' as parameter name
-        index = request.args.get('index', type=str)
-        file_path, variable = get_environmental_data(index, scenario, model)
-
-    # Run the data processing asynchronously
-    future = executor.submit(read_netcdf, file_path, variable, year)
+    future = executor.submit(read_netcdf, file_path, variable_name, time_index, feature_index)
     data = future.result()
 
-    response = jsonify(data)
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
+    return jsonify(data)
+
+@app.route('/api/features', methods=['GET'])
+def get_features():
+    with xr.open_dataset("output_diversity.nc") as ds:
+        features = ds['mean_values'].attrs.get('feature_names', '').split(',')
+    return jsonify({"features": features})
 
 @app.route('/api/map-data', methods=['GET'])
 def get_map_data():

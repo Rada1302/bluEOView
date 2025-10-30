@@ -167,9 +167,9 @@ const App = () => {
             color="white"
             onClick={() => setTutorialActive(true)}>Start Tutorial</Button>
         </Box>
-        <Typography variant="h1" sx={{ fontSize: '3.5rem', fontWeight: 'bold', color: 'white' }}>MAPMAKER</Typography>
+        <Typography variant="h1" sx={{ fontSize: '3.5rem', fontWeight: 'bold', color: 'white' }}>BluEOView</Typography>
         <Typography variant="h6" sx={{ fontSize: '1.25rem', color: 'white', mt: 1 }}>
-          MArine Plankton diversity bioindicator scenarios for policy MAKERs
+          Visualisation of CEPHALOPOD
         </Typography>
         <ReferencesButton />
       </Box>
