@@ -291,42 +291,6 @@ const App = () => {
                   />
                 </Box>
 
-                {/* Lock Icons */}
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'start',
-                    gap: 3,
-                    mt: 14,
-                  }}
-                >
-                  {/* Scenario lock */}
-                  <Box
-                    sx={{ cursor: 'pointer', '&:hover': { color: '#1976d2' }, display: 'flex', alignItems: 'center' }}
-                    onClick={() => {
-                      const newLock = !lockScenario;
-                      setLockScenario(newLock);
-                      if (newLock) setPanel2(prev => ({ ...prev, rcp: panel1.rcp }));
-                    }}
-                  >
-                    {lockScenario ? <Lock /> : <LockOpen />}
-                  </Box>
-
-                  {/* Model lock */}
-                  <Box
-                    sx={{ cursor: 'pointer', '&:hover': { color: '#1976d2' }, display: 'flex', alignItems: 'center' }}
-                    onClick={() => {
-                      const newLock = !lockModel;
-                      setLockModel(newLock);
-                      if (newLock) setPanel2(prev => ({ ...prev, model: panel1.model }));
-                    }}
-                  >
-                    {lockModel ? <Lock /> : <LockOpen />}
-                  </Box>
-                </Box>
-
                 {/* Right Control Panel */}
                 <Box sx={{ flex: 1, minWidth: 200 }}>
                   <ControlPanel

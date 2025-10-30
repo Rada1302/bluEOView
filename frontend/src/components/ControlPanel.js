@@ -5,10 +5,8 @@ import {
   FormControl,
   MenuItem,
   Select,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
   IconButton,
+  Slider,
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
@@ -34,12 +32,8 @@ const LabeledSelect = ({
         mr: 0.5,
         border: '1px solid rgba(255, 255, 255, 0.25)',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-        '& .MuiInputBase-input': {
-          color: '#FFFFFF',
-        },
-        '& .MuiSvgIcon-root': {
-          color: '#FFFFFF',
-        },
+        '& .MuiInputBase-input': { color: '#FFFFFF' },
+        '& .MuiSvgIcon-root': { color: '#FFFFFF' },
       }}
     >
       <Select
@@ -47,7 +41,11 @@ const LabeledSelect = ({
         value={value}
         onChange={onChange}
         startAdornment={
-          <IconButton onClick={() => openInfoModal(value, value)} size="small" sx={{ color: 'white' }}>
+          <IconButton
+            onClick={() => openInfoModal(label, infoText)}
+            size="small"
+            sx={{ color: 'white' }}
+          >
             <InfoOutlinedIcon fontSize="small" />
           </IconButton>
         }
@@ -60,17 +58,15 @@ const LabeledSelect = ({
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
               '& .MuiMenuItem-root': {
                 color: '#FFFFFF',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                },
+                '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.15)' },
               },
             },
           },
         }}
       >
         {options.map((opt) => (
-          <MenuItem key={opt} value={opt}>
-            {opt}
+          <MenuItem key={opt.value} value={opt.value}>
+            {opt.label}
           </MenuItem>
         ))}
       </Select>
@@ -87,106 +83,69 @@ const LabeledSelect = ({
 );
 
 const ControlPanel = ({
-  source,
-  onSourceChange,
-  diversity,
-  onDiversityChange,
-  envParam,
-  onEnvParamChange,
-  group,
-  onGroupChange,
-  rcp,
-  onRcpChange,
-  model,
-  onModelChange,
-  filteredGroups,
-  filteredScenarios,
-  filteredModels,
+  variable,
+  onVariableChange,
+  feature,
+  onFeatureChange,
+  time,
+  onTimeChange,
   openInfoModal,
-  diversityIndices,
-  environmentalParameters,
   tutorialStep,
-}) => (
-  <Box
-    sx={{
-      px: 2,
-      py: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.25)',
-      backdropFilter: 'blur(8px)',
-      borderRadius: 1,
-      border: [6].includes(tutorialStep) ? '4px solid #4FC3F7' : 'none',
-      boxShadow: [6].includes(tutorialStep)
-        ? '0 0 30px 10px rgba(79,195,247,0.6)'
-        : 'none',
-      animation: [6].includes(tutorialStep) ? 'pulse 1.5s infinite' : 'none',
-      position: 'relative',
-      zIndex: [6].includes(tutorialStep) ? 3000 : 'auto',
-    }}
-  >
-    {/* Data Source Row */}
-    <Box sx={{ alignItems: 'center', mb: 1 }}>
-      <FormControl component="fieldset" sx={{ color: 'white' }}>
-        <RadioGroup row name="source" value={source} onChange={onSourceChange}>
-          <FormControlLabel
-            value="plankton"
-            control={<Radio sx={{ color: 'white', '&.Mui-checked': { color: 'white' } }} />}
-            label={<Typography color="white">Plankton Diversity</Typography>}
-          />
-          <FormControlLabel
-            value="environmental"
-            control={<Radio sx={{ color: 'white', '&.Mui-checked': { color: 'white' } }} />}
-            label={<Typography color="white">Environmental Conditions</Typography>}
-          />
-        </RadioGroup>
-      </FormControl>
-    </Box>
+}) => {
+  // Dropdown options
+  const variableOptions = [
+    { label: 'Mean Values', value: 'mean_values' },
+    { label: 'Standard Deviation', value: 'sd_values' },
+  ];
 
-    {/* Scenario */}
-    <LabeledSelect
-      label="Scenario"
-      id="rcp"
-      value={rcp}
-      options={filteredScenarios}
-      onChange={onRcpChange}
-      infoText="RCP Scenarios general"
-      openInfoModal={openInfoModal}
-    />
+  const featureOptions = [
+    { label: 'Feature 0', value: 0 },
+    { label: 'Feature 1', value: 1 },
+    { label: 'Feature 2', value: 2 },
+    { label: 'Feature 3', value: 3 },
+  ];
 
-    {/* Model */}
-    <LabeledSelect
-      label="Model"
-      id="model"
-      value={model}
-      options={filteredModels}
-      onChange={onModelChange}
-      infoText="Earth System Models general"
-      openInfoModal={openInfoModal}
-    />
-
-    {/* Metric */}
-    <LabeledSelect
-      label={'Metric'}
-      id={source === 'plankton' ? 'diversity' : 'env-param'}
-      value={source === 'plankton' ? diversity : envParam}
-      options={source === 'plankton' ? diversityIndices : environmentalParameters}
-      onChange={source === 'plankton' ? onDiversityChange : onEnvParamChange}
-      infoText={source === 'plankton' ? 'Diversity Indices general' : 'Environmental Parameters general'}
-      openInfoModal={openInfoModal}
-    />
-
-    {/* Group (Plankton only) */}
-    {source === 'plankton' && (
+  return (
+    <Box
+      sx={{
+        px: 2,
+        py: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.25)',
+        backdropFilter: 'blur(8px)',
+        borderRadius: 1,
+        border: [6].includes(tutorialStep) ? '4px solid #4FC3F7' : 'none',
+        boxShadow: [6].includes(tutorialStep)
+          ? '0 0 30px 10px rgba(79,195,247,0.6)'
+          : 'none',
+        animation: [6].includes(tutorialStep) ? 'pulse 1.5s infinite' : 'none',
+        position: 'relative',
+        zIndex: [6].includes(tutorialStep) ? 3000 : 'auto',
+      }}
+    >
+      {/* Variable (Mean or SD) */}
       <LabeledSelect
-        label="Group"
-        id="group"
-        value={group}
-        options={filteredGroups}
-        onChange={onGroupChange}
-        infoText="Plankton Groups general"
+        label="Variable"
+        id="variable"
+        value={variable}
+        options={variableOptions}
+        onChange={onVariableChange}
+        infoText="Select whether to view mean values or standard deviation."
         openInfoModal={openInfoModal}
       />
-    )}
-  </Box>
-);
+
+      {/* Feature (0–3) */}
+      <LabeledSelect
+        label="Feature"
+        id="feature"
+        value={feature}
+        options={featureOptions}
+        onChange={onFeatureChange}
+        infoText="Choose which feature (0–3) to visualize."
+        openInfoModal={openInfoModal}
+      />
+      
+    </Box>
+  );
+};
 
 export default ControlPanel;
