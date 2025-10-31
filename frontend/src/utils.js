@@ -1,5 +1,3 @@
-import { colors } from './constants';
-
 export const generateColorStops = (colors) => {
     const step = 1 / colors.length;
     return colors.flatMap((color, i) => {
@@ -7,10 +5,6 @@ export const generateColorStops = (colors) => {
         const end = (i + 1) * step;
         return [[start, color], [end, color]];
     });
-};
-
-export const getColorscaleForIndex = (index, scenario) => {
-    return generateColorStops(colors);
 };
 
 export const getColorDomainForIndex = (minVal, maxVal, index, scenario) => {

@@ -114,6 +114,7 @@ const DataPanel = ({
                 {panel.view === 'globe' && (
                     <GlobeDisplay
                         month={panel.month}
+                        feature={panel.feature}
                         onPointClick={(x, y) => setSelectedPoint({ x, y })}
                         selectedPoint={selectedPoint}
                     />

@@ -2,19 +2,16 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import Globe from 'react-globe.gl';
 import {
   getColorscaleForIndex,
+  generateColorStops,
   getInterpolatedColorFromValue,
   getLegendFromColorscale,
   getColorDomainForIndex,
 } from '../utils';
-import { mapGlobeTitleStyle } from '../constants';
+import { mapGlobeTitleStyle, colors } from '../constants';
 
 const GlobeDisplay = ({
-  year,
-  index,
-  group,
-  scenario,
-  model,
-  sourceType = 'environmental',
+  month,
+  feature,
   onPointClick,
   selectedPoint,
 }) => {
@@ -29,16 +26,10 @@ const GlobeDisplay = ({
   const [cachedData, setCachedData] = useState({});
   const [isHovered, setIsHovered] = useState(false);
 
-  const readableIndex = index;
-  const readableGroup = group ? ` and ${group}` : '';
-  const fullTitle = `${readableIndex}${readableGroup} predicted by ${scenario} on ${model} in ${year}`;
+  const fullTitle = `${feature} in ${month}`;
   const normalizedSelectedPoint = selectedPoint
     ? { lat: selectedPoint.y, lng: selectedPoint.x }
     : null;
-
-  const colorscale = useMemo(() => {
-    return getColorscaleForIndex(index, scenario);
-  }, [index, scenario]);
 
   const createHtmlElement = (d) => {
     const el = document.createElement('div');
@@ -66,8 +57,8 @@ const GlobeDisplay = ({
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  const fetchData = async (yr) => {
-    const cacheKey = `${yr}_${index}_${group}_${scenario}_${model}_${sourceType}`;
+  const fetchData = async (month) => {
+    const cacheKey = `${month}_${feature}`;
 
     if (cachedData[cacheKey]) {
       setPointsData(cachedData[cacheKey].pointsData);
@@ -77,17 +68,7 @@ const GlobeDisplay = ({
     }
 
     try {
-      const isPlankton = sourceType === 'plankton';
-      const params = new URLSearchParams({
-        source: isPlankton ? 'plankton' : 'env',
-        year: yr.toString(),
-        index,
-        scenario,
-        model,
-      });
-      if (isPlankton) params.append('group', group);
-
-      const url = `/api/globe-data?${params.toString()}`;
+      const url = `/api/globe-data?variable=mean_values&time=${month}&feature=${feature}`;
       const response = await fetch(url);
       if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
@@ -95,8 +76,6 @@ const GlobeDisplay = ({
       const flatData = data.variable.flat();
       let minVal = Math.min(...flatData.filter((v) => !isNaN(v) && v != null));
       let maxVal = Math.max(...flatData.filter((v) => !isNaN(v) && v != null));
-
-      [minVal, maxVal] = getColorDomainForIndex(minVal, maxVal, index, scenario);
 
       const transformed = data.lats
         .filter((_, latIdx) => latIdx % 2 === 0)
@@ -112,7 +91,7 @@ const GlobeDisplay = ({
                 lat,
                 lng: lon,
                 size: value !== 0 ? 0.01 : 0,
-                color: getInterpolatedColorFromValue(value, minVal, maxVal, colorscale),
+                color: getInterpolatedColorFromValue(value, minVal, maxVal, generateColorStops(colors)),
               };
             });
         })
@@ -134,8 +113,8 @@ const GlobeDisplay = ({
   };
 
   useEffect(() => {
-    fetchData(year);
-  }, [year, index, group, scenario, model, sourceType]);
+    fetchData(month);
+  }, [month, feature]);
 
   useEffect(() => {
     if (globeRef.current) {
@@ -151,11 +130,11 @@ const GlobeDisplay = ({
   }, []);
 
   const legendData = useMemo(() => {
-    if (minValue == null || maxValue == null || colorscale.length === 0) {
+    if (minValue == null || maxValue == null || colors.length === 0) {
       return { colors: [], labels: [] };
     }
-    return getLegendFromColorscale(colorscale, minValue, maxValue);
-  }, [minValue, maxValue, colorscale]);
+    return getLegendFromColorscale(colors, minValue, maxValue);
+  }, [minValue, maxValue, colors]);
 
   const handlePointClick = (lng, lat) => {
     if (onPointClick) onPointClick(lng, lat);
@@ -246,7 +225,7 @@ const GlobeDisplay = ({
               <div
                 key={i}
                 style={{
-                  flex: 2 / colorscale.length,
+                  flex: 2 / colors.length,
                   backgroundColor: color,
                 }}
               />
@@ -269,7 +248,7 @@ const GlobeDisplay = ({
               <div
                 key={i}
                 style={{
-                  flex: 2 / colorscale.length,
+                  flex: 2 / colors.length,
                   color: 'white',
                   fontSize: 13,
                 }}
