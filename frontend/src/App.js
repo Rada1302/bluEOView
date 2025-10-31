@@ -39,7 +39,7 @@ const App = () => {
 
   // Panel states
   const [panel1, setPanel1] = useState(() => ({ ...initialPanel }));
-  const [panel2, setPanel2] = useState(() => ({ ...initialPanel, feature: 'a_evenness' }));
+  const [panel2, setPanel2] = useState(() => ({ ...initialPanel, feature: 'a_evenness', view: 'globe' }));
 
   // Locks
   const [lockMonth, setLockMonth] = useState(true);

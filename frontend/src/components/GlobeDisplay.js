@@ -29,7 +29,7 @@ const GlobeDisplay = ({
     ? { lat: selectedPoint.y, lng: selectedPoint.x }
     : null;
 
-  const createHtmlElement = (d) => {
+  const createHtmlElement = () => {
     const el = document.createElement('div');
     el.style.color = 'red';
     el.style.fontSize = '24px';
@@ -46,8 +46,10 @@ const GlobeDisplay = ({
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
-        const { offsetWidth, offsetHeight } = containerRef.current;
-        setDimensions({ width: offsetWidth, height: offsetHeight });
+        setDimensions({
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight,
+        });
       }
     };
     updateDimensions();
@@ -72,8 +74,8 @@ const GlobeDisplay = ({
       const data = await response.json();
 
       const flatData = data.variable.flat();
-      let minVal = Math.min(...flatData.filter((v) => !isNaN(v) && v != null));
-      let maxVal = Math.max(...flatData.filter((v) => !isNaN(v) && v != null));
+      const minVal = Math.min(...flatData.filter((v) => !isNaN(v) && v != null));
+      const maxVal = Math.max(...flatData.filter((v) => !isNaN(v) && v != null));
 
       const transformed = [...data.lats]
         .filter((_, latIdx) => latIdx % 2 === 0)
@@ -128,10 +130,11 @@ const GlobeDisplay = ({
   }, []);
 
   const legendData = useMemo(() => {
+    const colorscale = generateColorStops(colors);
     if (minValue == null || maxValue == null || colors.length === 0) {
       return { colors: [], labels: [] };
     }
-    return getLegendFromColorscale(colors, minValue, maxValue);
+    return getLegendFromColorscale(colorscale, minValue, maxValue);
   }, [minValue, maxValue, colors]);
 
   const handlePointClick = (lng, lat) => {
@@ -175,6 +178,7 @@ const GlobeDisplay = ({
             {error}
           </div>
         )}
+
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
           <Globe
             ref={globeRef}
@@ -199,7 +203,7 @@ const GlobeDisplay = ({
             position: 'absolute',
             top: 60,
             right: 10,
-            width: 90,
+            width: 70,
             height: 'calc(100% - 80px)',
             display: 'flex',
             flexDirection: 'row',
@@ -208,12 +212,13 @@ const GlobeDisplay = ({
             zIndex: 10,
           }}
         >
+          {/* Color slices */}
           <div
             style={{
-              flex: 1,
+              flex: 2,
               display: 'flex',
               flexDirection: 'column-reverse',
-              height: '90%',
+              height: '96%',
               borderRadius: 4,
               background: 'none',
             }}
@@ -222,31 +227,32 @@ const GlobeDisplay = ({
               <div
                 key={i}
                 style={{
-                  flex: 2 / colors.length,
+                  flex: 1,
                   backgroundColor: color,
+                  width: '100%',
                 }}
               />
             ))}
           </div>
 
+          {/* Labels */}
           <div
             style={{
-              flex: 1,
+              flex: 3,
               display: 'flex',
               flexDirection: 'column-reverse',
-              height: '96%',
-              borderRadius: 4,
-              background: 'none',
-              marginTop: 4,
+              justifyContent: 'space-between',
+              height: '100%',
+              marginLeft: 4,
             }}
           >
             {legendData.labels.map((lbl, i) => (
               <div
                 key={i}
                 style={{
-                  flex: 2 / colors.length,
                   color: 'white',
                   fontSize: 13,
+                  textAlign: 'left',
                 }}
               >
                 {`- ${lbl}`}
