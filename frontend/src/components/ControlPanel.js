@@ -6,7 +6,7 @@ import {
   Select,
   IconButton,
 } from '@mui/material';
-import { infoMessages, featureOptions, titles } from '../constants';
+import { featureOptions, featureNames } from '../constants';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 const LabeledSelect = ({
@@ -41,7 +41,7 @@ const LabeledSelect = ({
         onChange={onChange}
         startAdornment={
           <IconButton
-            onClick={() => {openInfoModal(titles[value], value)}}
+            onClick={() => { openInfoModal(featureNames[value], value) }}
             size="small"
             sx={{ color: 'white' }}
           >
@@ -107,7 +107,7 @@ const ControlPanel = ({
         infoText="Feature general"
         openInfoModal={openInfoModal}
       />
-      
+
     </Box>
   );
 };

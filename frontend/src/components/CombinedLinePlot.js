@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
+import { featureNames } from '../constants';
 
 // URL builder for monthly time axis
 const buildUrl = (settings, point, startMonth, endMonth, zoomedArea = null) => {
@@ -23,7 +24,7 @@ const getTrace = (data) => {
   };
 };
 
-const getName = (settings) => settings.feature || settings.label || 'Feature';
+const getName = (settings) => featureNames[settings.feature];
 
 const CombinedLinePlot = ({
   point,
@@ -97,7 +98,7 @@ const CombinedLinePlot = ({
   const layout = useMemo(() => {
     const title = zoomedArea
       ? `Zoomed Area Mean (±1 SD) of ${getName(leftSettings)}<br>and ${getName(rightSettings)}`
-      : `${getName(leftSettings)} and<br>${getName(rightSettings)} at ${point.x.toFixed(2)}°E, ${point.y.toFixed(2)}°N`;
+      : `${getName(leftSettings)} and ${getName(rightSettings)}<br> at ${point.x.toFixed(2)}°E, ${point.y.toFixed(2)}°N`;
 
     return {
       margin: { l: 70, r: 70, t: 70, b: 50 },

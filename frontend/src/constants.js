@@ -12,6 +12,21 @@ export const colors = [
     '#fde725'
 ];
 
+export const containerStyle = {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+    backgroundColor: 'rgba(18, 18, 18, 0.6)',
+};
+
+export const plotWrapperStyle = {
+    position: 'absolute',
+    top: 5,
+    left: 0,
+    width: '100%',
+    height: '100%',
+};
+
 // TODO: replace with actual project descriptions
 export const shortProjectDescription = "";
 export const projectDescription = "";
@@ -24,7 +39,7 @@ export const infoMessages = {
     "a_invsimpson": "Emphasizes dominant species in a community. Higher values indicate greater diversity and less dominance by a single species."
 };
 
-export const titles = {
+export const featureNames = {
     "a_shannon": "Shannon Diversity Index",
     "a_richness": "Species Richness",
     "a_evenness": "Evenness Index",

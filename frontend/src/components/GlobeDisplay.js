@@ -5,7 +5,7 @@ import {
   getInterpolatedColorFromValue,
   getLegendFromColorscale,
 } from '../utils';
-import { mapGlobeTitleStyle, colors } from '../constants';
+import { mapGlobeTitleStyle, colors, monthNames, featureNames } from '../constants';
 
 const GlobeDisplay = ({
   month,
@@ -24,7 +24,7 @@ const GlobeDisplay = ({
   const [cachedData, setCachedData] = useState({});
   const [isHovered, setIsHovered] = useState(false);
 
-  const fullTitle = `${feature} in ${month}`;
+  const fullTitle = `${featureNames[feature]} in ${monthNames[month]}`;
   const normalizedSelectedPoint = selectedPoint
     ? { lat: selectedPoint.y, lng: selectedPoint.x }
     : null;

@@ -1,22 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
-import { colors, mapGlobeTitleStyle } from '../constants';
+import { colors, mapGlobeTitleStyle, featureNames, monthNames, containerStyle, plotWrapperStyle } from '../constants';
 import { generateColorStops, generateColorbarTicks } from '../utils';
-
-const containerStyle = {
-  width: '100%',
-  height: '100%',
-  position: 'relative',
-  backgroundColor: 'rgba(18, 18, 18, 0.6)',
-};
-
-const plotWrapperStyle = {
-  position: 'absolute',
-  top: 5,
-  left: 0,
-  width: '100%',
-  height: '100%',
-};
 
 const MapDisplay = ({
   month,
@@ -81,7 +66,7 @@ const MapDisplay = ({
       zsmooth: false,
       zmin: 0,
       zmax: 1,
-      hovertemplate: `Longitude: %{x}<br>Latitude: %{y}<br>Value: %{z}<extra></extra>`,
+      hovertemplate: `Longitude: %{x}<br>Latitude: %{y}<br>${featureNames[feature]}: %{z}<extra></extra>`,
       colorbar: {
         tickcolor: 'white',
         tickfont: { color: 'white' },
@@ -121,7 +106,7 @@ const MapDisplay = ({
         showgrid: false,
         zeroline: false,
         showticklabels: false,
-        autorange: 'reversed', // <-- fix upside-down map
+        autorange: 'reversed',
       },
     };
 
@@ -168,7 +153,7 @@ const MapDisplay = ({
 
   return (
     <div style={containerStyle}>
-      <div style={mapGlobeTitleStyle}>{feature}</div>
+      <div style={mapGlobeTitleStyle}>{featureNames[feature]} in {monthNames[month]}</div>
       {error && <div style={{ color: 'red' }}>{error}</div>}
       {!loading && !error && data.length === 0 && (
         <div style={{ color: 'gray' }}>No data available</div>
