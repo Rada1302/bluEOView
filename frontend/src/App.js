@@ -26,7 +26,7 @@ const App = () => {
 
   // Top-level UI / modal state
   const [infoModalOpen, setInfoModalOpen] = useState(false);
-  const [infoModalText, setInfoModalText] = useState('');
+  const [infoModalShortText, setInfoModalShortText] = useState('');
   const [infoModalTitle, setInfoModalTitle] = useState('');
   const [projectModalOpen, setProjectModalOpen] = useState(() => {
     const hideModal = localStorage.getItem('hideProjectExplanation');
@@ -69,7 +69,7 @@ const App = () => {
 
   // Info modal helpers
   const openInfoModal = (title, key) => {
-    setInfoModalText(infoMessages[key] ?? 'No information available');
+    setInfoModalShortText(infoMessages[key] ?? 'No information available');
     setInfoModalTitle(title);
     setInfoModalOpen(true);
   };
@@ -121,7 +121,7 @@ const App = () => {
         open={infoModalOpen}
         onClose={closeInfoModal}
         title={infoModalTitle}
-        longText={infoModalText}
+        shortText={infoModalShortText}
       />
 
       <Box

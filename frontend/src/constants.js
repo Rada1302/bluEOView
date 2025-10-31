@@ -17,10 +17,27 @@ export const shortProjectDescription = "";
 export const projectDescription = "";
 
 export const infoMessages = {
-    "Shannon Diversity Index": "Measures species diversity considering both abundance and evenness. Higher values indicate greater diversity.", "Species Richness": "The total number of species in a given area. Higher values indicate more species are present.",
-    "Evenness Index": "Measures how evenly individuals are distributed among species. Values close to 1 indicate more even distributions.",
-    "Inverse Simpson Index": "Emphasizes dominant species in a community. Higher values indicate greater diversity and less dominance by a single species."
+    "Feature general": "Select the feature you want to visualize on the map or globe. Each feature provides different insights into species diversity and distribution.",
+    "a_shannon": "Measures species diversity considering both abundance and evenness. Higher values indicate greater diversity.",
+    "a_richness": "The total number of species in a given area. Higher values indicate more species are present.",
+    "a_evenness": "Measures how evenly individuals are distributed among species. Values close to 1 indicate more even distributions.",
+    "a_invsimpson": "Emphasizes dominant species in a community. Higher values indicate greater diversity and less dominance by a single species."
 };
+
+export const titles = {
+    "a_shannon": "Shannon Diversity Index",
+    "a_richness": "Species Richness",
+    "a_evenness": "Evenness Index",
+    "a_invsimpson": "Inverse Simpson Index"
+};
+
+// Dropdown options
+export const featureOptions = [
+    { label: 'Shannon Diversity Index', value: 'a_shannon' },
+    { label: 'Species Richness', value: 'a_richness' },
+    { label: 'Evenness Index', value: 'a_evenness' },
+    { label: 'Inverse Simpson Index', value: 'a_invsimpson' },
+];
 
 export const logos = [
     {
