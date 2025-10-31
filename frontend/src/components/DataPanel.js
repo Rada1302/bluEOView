@@ -15,17 +15,17 @@ import MapDisplay from './MapDisplay';
 const DataPanel = ({
     panel,
     setPanel,
-    tutorialStep,
-    debouncedUpdateYear,
+    debouncedMonth,
+    debouncedUpdateMonth,
     setSelectedPoint,
     setArea,
     selectedPoint,
     selectedArea,
-    lockYear,
-    onYearChange,
+    lockMonth,
+    onMonthChange,
     onLockToggle,
     sharedZoom,
-    onSharedZoomChange
+    onSharedZoomChange,
 }) => {
 
     return (
@@ -36,13 +36,8 @@ const DataPanel = ({
                 borderRadius: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                border: [1, 2, 3, 7].includes(tutorialStep) ? '4px solid #4FC3F7' : 'none',
-                boxShadow: [1, 2, 3, 7].includes(tutorialStep)
-                    ? '0 0 30px 10px rgba(79,195,247,0.6)'
-                    : 'none',
-                animation: [1, 2, 3, 7].includes(tutorialStep) ? 'pulse 1.5s infinite' : 'none',
                 position: 'relative',
-                zIndex: [1, 2, 3, 7].includes(tutorialStep) ? 3000 : 'auto',
+                zIndex: 'auto',
             }}
         >
             {/* View Switch */}
@@ -71,7 +66,7 @@ const DataPanel = ({
             <Box sx={{ mb: 1, px: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
                     <Typography color="white" variant="subtitle">
-                        Year: {panel.year}
+                        Month: {panel.month}
                     </Typography>
                     <Box
                         sx={{
@@ -83,17 +78,17 @@ const DataPanel = ({
                         }}
                         onClick={() => onLockToggle && onLockToggle()}
                     >
-                        {lockYear ? <Lock /> : <LockOpen />}
+                        {lockMonth ? <Lock /> : <LockOpen />}
                     </Box>
                 </Box>
                 <MuiSlider
-                    min={2012}
-                    max={2100}
-                    value={panel.year}
+                    min={0}
+                    max={12}
+                    value={panel.month}
                     onChange={(e, v) => {
-                        setPanel(prev => ({ ...prev, year: v }));
-                        debouncedUpdateYear(v);
-                        if (onYearChange) onYearChange(v);
+                        setPanel(prev => ({ ...prev, month: v }));
+                        debouncedUpdateMonth(v);
+                        if (onMonthChange) onMonthChange(v);
                     }}
                     valueLabelDisplay="auto"
                     sx={{ color: '#1976d2' }}
@@ -102,14 +97,10 @@ const DataPanel = ({
 
             {/* Display Map or Globe */}
             <Box sx={{ width: '100%', height: 400, position: 'relative' }}>
-                {panel.source === 'plankton' && panel.view === 'map' && (
+                {panel.view === 'map' && (
                     <MapDisplay
-                        year={panel.year}
-                        index={panel.diversity}
-                        group={panel.group}
-                        scenario={panel.rcp}
-                        model={panel.model}
-                        sourceType="plankton"
+                        month={panel.month}
+                        feature={panel.feature}
                         onPointClick={(x, y) => setSelectedPoint({ x, y })}
                         selectedPoint={selectedPoint}
                         selectedArea={selectedArea}
@@ -120,42 +111,9 @@ const DataPanel = ({
                         zoomedArea={sharedZoom}
                     />
                 )}
-                {panel.source === 'plankton' && panel.view === 'globe' && (
+                {panel.view === 'globe' && (
                     <GlobeDisplay
-                        year={panel.year}
-                        index={panel.diversity}
-                        group={panel.group}
-                        scenario={panel.rcp}
-                        model={panel.model}
-                        sourceType="plankton"
-                        onPointClick={(x, y) => setSelectedPoint({ x, y })}
-                        selectedPoint={selectedPoint}
-                    />
-                )}
-                {panel.source === 'environmental' && panel.view === 'map' && (
-                    <MapDisplay
-                        year={panel.year}
-                        index={panel.envParam}
-                        scenario={panel.rcp}
-                        model={panel.model}
-                        sourceType="environmental"
-                        onPointClick={(x, y) => setSelectedPoint({ x, y })}
-                        selectedPoint={selectedPoint}
-                        selectedArea={selectedArea}
-                        onZoomedAreaChange={(area) => {
-                            setArea(area);
-                            onSharedZoomChange?.(area);
-                        }}
-                        zoomedArea={sharedZoom}
-                    />
-                )}
-                {panel.source === 'environmental' && panel.view === 'globe' && (
-                    <GlobeDisplay
-                        year={panel.year}
-                        index={panel.envParam}
-                        scenario={panel.rcp}
-                        model={panel.model}
-                        sourceType="environmental"
+                        month={panel.month}
                         onPointClick={(x, y) => setSelectedPoint({ x, y })}
                         selectedPoint={selectedPoint}
                     />
