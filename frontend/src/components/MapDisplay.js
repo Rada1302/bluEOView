@@ -19,14 +19,13 @@ const plotWrapperStyle = {
 };
 
 const MapDisplay = ({
-  year,
-  feature = 0,
-  scenario,
-  model,
+  month,
+  feature,
   onPointClick,
-  zoomedArea,
-  onZoomedAreaChange,
   selectedPoint,
+  selectedArea,
+  onZoomedAreaChange,
+  zoomedArea,
 }) => {
   const [lats, setLats] = useState([]);
   const [lons, setLons] = useState([]);
@@ -36,11 +35,9 @@ const MapDisplay = ({
 
   const colorscale = useMemo(() => generateColorStops(colors), []);
 
-  const uiRevisionKey = useMemo(() => `${year}-${feature}-${scenario}-${model}`, [
-    year,
+  const uiRevisionKey = useMemo(() => `${month}-${feature}`, [
+    month,
     feature,
-    scenario,
-    model,
   ]);
 
   useEffect(() => {
@@ -50,7 +47,7 @@ const MapDisplay = ({
     const fetchData = async () => {
       setLoading(true);
       try {
-        const url = `/api/globe-data?variable=mean_values&time=${year - 2012}&feature=${feature}`;
+        const url = `/api/globe-data?variable=mean_values&time=${month}&feature=${feature}`;
         const response = await fetch(url, { signal });
         if (!response.ok) throw new Error('Network response was not ok');
 
@@ -71,7 +68,7 @@ const MapDisplay = ({
 
     fetchData();
     return () => controller.abort();
-  }, [year, feature, scenario, model]);
+  }, [month, feature]);
 
   const { tickvals, ticktext } = useMemo(() => {
     return generateColorbarTicks(0, 1, colors.length);
