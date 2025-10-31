@@ -204,16 +204,8 @@ const App = () => {
               >
                 <Box sx={{ flex: 1, minWidth: 200 }}>
                   <ControlPanel
-                    source={panel1.source}
-                    onSourceChange={(e) => setPanel1(prev => ({ ...prev, source: e.target.value }))}
-                    diversity={panel1.diversity}
-                    onDiversityChange={(e) => setPanel1(prev => ({ ...prev, diversity: e.target.value }))}
-                    envParam={panel1.envParam}
-                    onEnvParamChange={(e) => setPanel1(prev => ({ ...prev, envParam: e.target.value }))}
-                    group={panel1.group}
-                    onGroupChange={(e) => setPanel1(prev => ({ ...prev, group: e.target.value }))}
-                    rcp={panel1.rcp}
-                    model={panel1.model}
+                    feature={panel1.feature}
+                    onFeatureChange={(e) => setPanel1(prev => ({ ...prev, feature: e.target.value }))}
                     openInfoModal={openInfoModal}
                   />
                 </Box>
@@ -221,16 +213,8 @@ const App = () => {
                 {/* Right Control Panel */}
                 <Box sx={{ flex: 1, minWidth: 200 }}>
                   <ControlPanel
-                    source={panel2.source}
-                    onSourceChange={(e) => setPanel2(prev => ({ ...prev, source: e.target.value }))}
-                    diversity={panel2.diversity}
-                    onDiversityChange={(e) => setPanel2(prev => ({ ...prev, diversity: e.target.value }))}
-                    envParam={panel2.envParam}
-                    onEnvParamChange={(e) => setPanel2(prev => ({ ...prev, envParam: e.target.value }))}
-                    group={panel2.group}
-                    onGroupChange={(e) => setPanel2(prev => ({ ...prev, group: e.target.value }))}
-                    rcp={panel2.rcp}
-                    model={panel2.model}
+                    feature={panel2.feature}
+                    onFeatureChange={(e) => setPanel2(prev => ({ ...prev, feature: e.target.value }))}
                     openInfoModal={openInfoModal}
                   />
                 </Box>
@@ -250,23 +234,13 @@ const App = () => {
               point={selectedPoint}
               zoomedArea={area}
               leftSettings={{
-                source: panel1.source,
-                index: panel1.diversity,
-                group: panel1.group,
-                scenario: panel1.rcp,
-                model: panel1.model,
-                envParam: panel1.envParam,
+                feature: panel1.feature,
               }}
               rightSettings={{
-                source: panel2.source,
-                index: panel2.diversity,
-                group: panel2.group,
-                scenario: panel2.rcp,
-                model: panel2.model,
-                envParam: panel2.envParam,
+                feature: panel2.feature,
               }}
-              startMonth={2012}
-              endMonth={2100}
+              startMonth={0}
+              endMonth={12}
             />
           </Box>
         </Box>
