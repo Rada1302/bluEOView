@@ -35,10 +35,7 @@ const MapDisplay = ({
 
   const colorscale = useMemo(() => generateColorStops(colors), []);
 
-  const uiRevisionKey = useMemo(() => `${month}-${feature}`, [
-    month,
-    feature,
-  ]);
+  const uiRevisionKey = useMemo(() => `${month}-${feature}`, [month, feature]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -120,7 +117,12 @@ const MapDisplay = ({
       uirevision: uiRevisionKey,
       dragmode: 'zoom',
       xaxis: { showgrid: false, zeroline: false, showticklabels: false },
-      yaxis: { showgrid: false, zeroline: false, showticklabels: false },
+      yaxis: {
+        showgrid: false,
+        zeroline: false,
+        showticklabels: false,
+        autorange: 'reversed', // <-- fix upside-down map
+      },
     };
 
     if (zoomedArea?.x && zoomedArea?.y) {
@@ -128,17 +130,18 @@ const MapDisplay = ({
       baseLayout.yaxis.range = zoomedArea.y;
       baseLayout.xaxis.autorange = false;
       baseLayout.yaxis.autorange = false;
-    } else {
-      baseLayout.xaxis.autorange = true;
-      baseLayout.yaxis.autorange = true;
     }
 
     return baseLayout;
   }, [uiRevisionKey, zoomedArea]);
 
   const parseRelayoutRanges = (eventData) => {
-    const xr = eventData['xaxis.range'] || [eventData['xaxis.range[0]'], eventData['xaxis.range[1]']];
-    const yr = eventData['yaxis.range'] || [eventData['yaxis.range[0]'], eventData['yaxis.range[1]']];
+    const xr =
+      eventData['xaxis.range'] ||
+      [eventData['xaxis.range[0]'], eventData['xaxis.range[1]']];
+    const yr =
+      eventData['yaxis.range'] ||
+      [eventData['yaxis.range[0]'], eventData['yaxis.range[1]']];
     if (xr?.[0] != null && xr?.[1] != null && yr?.[0] != null && yr?.[1] != null) {
       return { x: xr, y: yr };
     }
@@ -167,7 +170,9 @@ const MapDisplay = ({
     <div style={containerStyle}>
       <div style={mapGlobeTitleStyle}>{feature}</div>
       {error && <div style={{ color: 'red' }}>{error}</div>}
-      {!loading && !error && data.length === 0 && <div style={{ color: 'gray' }}>No data available</div>}
+      {!loading && !error && data.length === 0 && (
+        <div style={{ color: 'gray' }}>No data available</div>
+      )}
       <div style={plotWrapperStyle}>
         <Plot
           data={plotData}
@@ -176,7 +181,12 @@ const MapDisplay = ({
           style={{ width: '100%', height: '100%' }}
           onRelayout={handleRelayout}
           onClick={handlePointClick}
-          config={{ displayModeBar: false, responsive: true, displaylogo: false, showTips: false }}
+          config={{
+            displayModeBar: false,
+            responsive: true,
+            displaylogo: false,
+            showTips: false,
+          }}
         />
       </div>
     </div>

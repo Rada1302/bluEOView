@@ -75,13 +75,13 @@ const GlobeDisplay = ({
       let minVal = Math.min(...flatData.filter((v) => !isNaN(v) && v != null));
       let maxVal = Math.max(...flatData.filter((v) => !isNaN(v) && v != null));
 
-      const transformed = data.lats
+      const transformed = [...data.lats]
         .filter((_, latIdx) => latIdx % 2 === 0)
         .map((lat, latIdx) => {
           return data.lons
             .filter((_, lonIdx) => lonIdx % 2 === 0)
             .map((lon, lonIdx) => {
-              const realLatIdx = latIdx * 2;
+              const realLatIdx = data.lats.length - 1 - latIdx * 2;
               const realLonIdx = lonIdx * 2;
               const value = data.variable[realLatIdx][realLonIdx];
               if (value == null || isNaN(value)) return null;
@@ -89,7 +89,12 @@ const GlobeDisplay = ({
                 lat,
                 lng: lon,
                 size: value !== 0 ? 0.01 : 0,
-                color: getInterpolatedColorFromValue(value, minVal, maxVal, generateColorStops(colors)),
+                color: getInterpolatedColorFromValue(
+                  value,
+                  minVal,
+                  maxVal,
+                  generateColorStops(colors)
+                ),
               };
             });
         })
@@ -118,11 +123,6 @@ const GlobeDisplay = ({
     if (globeRef.current) {
       globeRef.current.controls().minDistance = 250;
       globeRef.current.controls().maxDistance = 400;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (globeRef.current) {
       globeRef.current.controls().autoRotate = false;
     }
   }, []);
@@ -160,7 +160,7 @@ const GlobeDisplay = ({
           backgroundColor: 'rgba(18, 18, 18, 0.6)',
         }}
       >
-        <div style={mapGlobeTitleStyle} dangerouslySetInnerHTML={{ __html: fullTitle }} />
+        <div style={mapGlobeTitleStyle}>{fullTitle}</div>
 
         {error && (
           <div
@@ -176,24 +176,24 @@ const GlobeDisplay = ({
           </div>
         )}
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-          <div style={{ width: '100%', height: '100%' }}>
-            <Globe
-              ref={globeRef}
-              width={dimensions.width}
-              height={dimensions.height}
-              globeImageUrl="//unpkg.com/three-globe/example/img/earth-water.png"
-              showAtmosphere={false}
-              backgroundColor="rgba(18, 18, 18, 0.6)"
-              pointsData={pointsData}
-              pointAltitude="size"
-              pointColor="color"
-              pointRadius={0.9}
-              onPointClick={(pt) => handlePointClick(pt.lng, pt.lat)}
-              htmlElementsData={normalizedSelectedPoint ? [normalizedSelectedPoint] : []}
-              htmlElement={createHtmlElement}
-            />
-          </div>
+          <Globe
+            ref={globeRef}
+            width={dimensions.width}
+            height={dimensions.height}
+            globeImageUrl="//unpkg.com/three-globe/example/img/earth-water.png"
+            showAtmosphere={false}
+            backgroundColor="rgba(18, 18, 18, 0.6)"
+            pointsData={pointsData}
+            pointAltitude="size"
+            pointColor="color"
+            pointRadius={0.9}
+            onPointClick={(pt) => handlePointClick(pt.lng, pt.lat)}
+            htmlElementsData={normalizedSelectedPoint ? [normalizedSelectedPoint] : []}
+            htmlElement={createHtmlElement}
+          />
         </div>
+
+        {/* Legend */}
         <div
           style={{
             position: 'absolute',
@@ -208,7 +208,6 @@ const GlobeDisplay = ({
             zIndex: 10,
           }}
         >
-          {/* Color bins */}
           <div
             style={{
               flex: 1,
@@ -230,7 +229,6 @@ const GlobeDisplay = ({
             ))}
           </div>
 
-          {/* Labels */}
           <div
             style={{
               flex: 1,
@@ -254,7 +252,6 @@ const GlobeDisplay = ({
                 {`- ${lbl}`}
               </div>
             ))}
-
           </div>
         </div>
       </div>
