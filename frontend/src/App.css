@@ -16,7 +16,7 @@ body {
 }
 
 .App {
-    background-image: url('../public/assets/background.jpg');
+    background-image: url('../public/assets/image.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
