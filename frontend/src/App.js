@@ -7,37 +7,26 @@ import ControlPanel from './components/ControlPanel';
 import InfoModal from './components/InfoModal';
 import debounce from 'lodash/debounce';
 import './App.css';
-import { Box, Typography, Divider, IconButton, Collapse, Button } from '@mui/material';
+import { Box, Typography, Divider, IconButton, Collapse } from '@mui/material';
 import {
-  diversityIndices,
-  environmentalParameters,
-  planktonGroups,
-  rcpScenarios,
-  earthModels,
   infoMessages,
   shortProjectDescription,
   projectDescription,
 } from './constants';
-import { Lock, LockOpen, ExpandLess, ExpandMore } from '@mui/icons-material';
+import { ExpandLess, ExpandMore } from '@mui/icons-material';
 
 const App = () => {
   // Initial panel definition
   const initialPanel = {
-    year: 2025,
-    debouncedYear: 2025,
-    source: 'plankton',
+    month: 0,
+    debouncedMonth: 0,
     view: 'map',
-    diversity: diversityIndices[1],
-    envParam: environmentalParameters[0],
-    group: planktonGroups[0],
-    rcp: rcpScenarios[0],
-    model: earthModels[0],
+    feature: 'Shannon Diversity Index',
   };
 
   // Top-level UI / modal state
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [infoModalText, setInfoModalText] = useState('');
-  const [infoModalShortText, setInfoModalShortText] = useState('');
   const [infoModalTitle, setInfoModalTitle] = useState('');
   const [projectModalOpen, setProjectModalOpen] = useState(() => {
     const hideModal = localStorage.getItem('hideProjectExplanation');
@@ -50,32 +39,30 @@ const App = () => {
 
   // Panel states
   const [panel1, setPanel1] = useState(() => ({ ...initialPanel }));
-  const [panel2, setPanel2] = useState(() => ({ ...initialPanel, source: 'environmental', view: 'globe' }));
+  const [panel2, setPanel2] = useState(() => ({ ...initialPanel}));
 
   // Locks
-  const [lockScenario, setLockScenario] = useState(true);
-  const [lockModel, setLockModel] = useState(true);
-  const [lockYear, setLockYear] = useState(true);
+  const [lockMonth, setLockMonth] = useState(true);
 
-  // Debounced years (keep initial in sync with initialPanel.year)
-  const [debouncedYear1, setDebouncedYear1] = useState(initialPanel.year);
-  const [debouncedYear2, setDebouncedYear2] = useState(initialPanel.year);
+  // Debounced years (keep initial in sync with initialPanel.month)
+  const [debouncedMonth1, setDebouncedMonth1] = useState(initialPanel.month);
+  const [debouncedMonth2, setDebouncedMonth2] = useState(initialPanel.month);
 
-  const debouncedUpdateYear1 = useMemo(
-    () => debounce((y) => setDebouncedYear1(y), 500),
+  const debouncedUpdateMonth1 = useMemo(
+    () => debounce((y) => setDebouncedMonth1(y), 500),
     []
   );
-  const debouncedUpdateYear2 = useMemo(
-    () => debounce((y) => setDebouncedYear2(y), 500),
+  const debouncedUpdateMonth2 = useMemo(
+    () => debounce((y) => setDebouncedMonth2(y), 500),
     []
   );
 
   useEffect(() => {
     return () => {
-      debouncedUpdateYear1.cancel();
-      debouncedUpdateYear2.cancel();
+      debouncedUpdateMonth1.cancel();
+      debouncedUpdateMonth2.cancel();
     };
-  }, [debouncedUpdateYear1, debouncedUpdateYear2]);
+  }, [debouncedUpdateMonth1, debouncedUpdateMonth2]);
 
   //  Collapsible state
   const [panelsCollapsed, setPanelsCollapsed] = useState(false);
@@ -88,42 +75,20 @@ const App = () => {
   };
   const closeInfoModal = () => setInfoModalOpen(false);
 
-  // Filtering helper
-  const filterBiomes = (diversity) => ({
-    groups: diversity === 'Biomes' ? planktonGroups.slice(0, 1) : planktonGroups,
-    rcp: diversity === 'Biomes' ? rcpScenarios.slice(0, 3) : rcpScenarios,
-    models: diversity === 'Biomes' ? earthModels.slice(0, 1) : earthModels,
-  });
-
-  // Scenario & Model & Year handlers
-  const handleRcpChange = (panelSetter, otherPanelSetter, value) => {
-    panelSetter(prev => ({ ...prev, rcp: value }));
-    if (lockScenario) {
-      otherPanelSetter(prev => ({ ...prev, rcp: value }));
+  const handleMonthChange = (panelSetter, otherPanelSetter, month) => {
+    panelSetter(prev => ({ ...prev, month }));
+    if (lockMonth) {
+      otherPanelSetter(prev => ({ ...prev, month }));
     }
   };
 
-  const handleModelChange = (panelSetter, otherPanelSetter, value) => {
-    panelSetter(prev => ({ ...prev, model: value }));
-    if (lockModel) {
-      otherPanelSetter(prev => ({ ...prev, model: value }));
-    }
-  };
-
-  const handleYearChange = (panelSetter, otherPanelSetter, year) => {
-    panelSetter(prev => ({ ...prev, year }));
-    if (lockYear) {
-      otherPanelSetter(prev => ({ ...prev, year }));
-    }
-  };
-
-  const handleYearLockToggle = () => {
-    const newLock = !lockYear;
-    setLockYear(newLock);
+  const handleMonthLockToggle = () => {
+    const newLock = !lockMonth;
+    setLockMonth(newLock);
 
     if (newLock) {
-      // synchronize panel2 year to panel1 when enabling the lock
-      setPanel2(prev => ({ ...prev, year: panel1.year }));
+      // synchronize panel2 month to panel1 when enabling the lock
+      setPanel2(prev => ({ ...prev, month: panel1.month }));
     }
   };
 
@@ -134,7 +99,7 @@ const App = () => {
       <InfoModal
         open={projectModalOpen}
         onClose={() => setProjectModalOpen(false)}
-        title={"Welcome to MAPMAKER!"}
+        title={"Welcome to bluEOView!"}
         shortText={shortProjectDescription}
         longText={projectDescription}
         showDontShowAgain={true}
@@ -156,7 +121,6 @@ const App = () => {
         open={infoModalOpen}
         onClose={closeInfoModal}
         title={infoModalTitle}
-        shortText={infoModalShortText}
         longText={infoModalText}
       />
 
@@ -176,15 +140,15 @@ const App = () => {
           <DataPanel
             panel={panel1}
             setPanel={setPanel1}
-            debouncedYear={debouncedYear1}
-            debouncedUpdateYear={debouncedUpdateYear1}
+            debouncedMonth={debouncedMonth1}
+            debouncedUpdateMonth={debouncedUpdateMonth1}
             setSelectedPoint={setSelectedPoint}
             setArea={setArea}
             selectedPoint={selectedPoint}
             selectedArea={area}
-            lockYear={lockYear}
-            onYearChange={(y) => handleYearChange(setPanel1, setPanel2, y)}
-            onLockToggle={handleYearLockToggle}
+            lockMonth={lockMonth}
+            onMonthChange={(y) => handleMonthChange(setPanel1, setPanel2, y)}
+            onLockToggle={handleMonthLockToggle}
             sharedZoom={sharedZoom}
             onSharedZoomChange={setSharedZoom}
           />
@@ -249,14 +213,7 @@ const App = () => {
                     group={panel1.group}
                     onGroupChange={(e) => setPanel1(prev => ({ ...prev, group: e.target.value }))}
                     rcp={panel1.rcp}
-                    onRcpChange={(e) => handleRcpChange(setPanel1, setPanel2, e.target.value)}
                     model={panel1.model}
-                    onModelChange={(e) => handleModelChange(setPanel1, setPanel2, e.target.value)}
-                    filteredGroups={filterBiomes(panel1.diversity).groups}
-                    filteredScenarios={filterBiomes(panel1.diversity).rcp}
-                    filteredModels={filterBiomes(panel1.diversity).models}
-                    diversityIndices={diversityIndices}
-                    environmentalParameters={environmentalParameters}
                     openInfoModal={openInfoModal}
                   />
                 </Box>
@@ -273,14 +230,7 @@ const App = () => {
                     group={panel2.group}
                     onGroupChange={(e) => setPanel2(prev => ({ ...prev, group: e.target.value }))}
                     rcp={panel2.rcp}
-                    onRcpChange={(e) => handleRcpChange(setPanel2, setPanel1, e.target.value)}
                     model={panel2.model}
-                    onModelChange={(e) => handleModelChange(setPanel2, setPanel1, e.target.value)}
-                    filteredGroups={filterBiomes(panel2.diversity).groups}
-                    filteredScenarios={filterBiomes(panel2.diversity).rcp}
-                    filteredModels={filterBiomes(panel2.diversity).models}
-                    diversityIndices={diversityIndices}
-                    environmentalParameters={environmentalParameters}
                     openInfoModal={openInfoModal}
                   />
                 </Box>
@@ -315,8 +265,8 @@ const App = () => {
                 model: panel2.model,
                 envParam: panel2.envParam,
               }}
-              startYear={2012}
-              endYear={2100}
+              startMonth={2012}
+              endMonth={2100}
             />
           </Box>
         </Box>
@@ -325,15 +275,15 @@ const App = () => {
           <DataPanel
             panel={panel2}
             setPanel={setPanel2}
-            debouncedYear={debouncedYear2}
-            debouncedUpdateYear={debouncedUpdateYear2}
+            debouncedMonth={debouncedMonth2}
+            debouncedUpdateMonth={debouncedUpdateMonth2}
             setSelectedPoint={setSelectedPoint}
             setArea={setArea}
             selectedPoint={selectedPoint}
             selectedArea={area}
-            lockYear={lockYear}
-            onYearChange={(y) => handleYearChange(setPanel2, setPanel1, y)}
-            onLockToggle={handleYearLockToggle}
+            lockMonth={lockMonth}
+            onMonthChange={(y) => handleMonthChange(setPanel2, setPanel1, y)}
+            onLockToggle={handleMonthLockToggle}
             sharedZoom={sharedZoom}
             onSharedZoomChange={setSharedZoom}
           />

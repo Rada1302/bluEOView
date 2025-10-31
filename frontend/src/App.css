@@ -16,23 +16,9 @@ body {
 }
 
 .App {
-    background-image: url('../public/assets/option4.jpg');
+    background-image: url('../public/assets/background.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     min-height: 100vh;
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0px #4FC3F7;
-    }
-
-    50% {
-        box-shadow: 0 0 25px #4FC3F7;
-    }
-
-    100% {
-        box-shadow: 0 0 0px #4FC3F7;
-    }
 }

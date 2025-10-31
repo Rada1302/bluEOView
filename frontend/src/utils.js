@@ -1,4 +1,4 @@
-import { differenceColors, temperatureColors, sequentialColors } from './constants';
+import { colors } from './constants';
 
 export const generateColorStops = (colors) => {
     const step = 1 / colors.length;
@@ -10,7 +10,6 @@ export const generateColorStops = (colors) => {
 };
 
 export const getColorscaleForIndex = (index, scenario) => {
-    const colors = (index.includes("Change") || scenario.includes("-")) ? differenceColors : index.includes("Temperature") ? temperatureColors : sequentialColors;
     return generateColorStops(colors);
 };
 

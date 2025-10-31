@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
-import { nameToLabelMapping } from '../constants';
 
 // Utility helpers
 const buildUrl = (settings, point, startYear, endYear, zoomedArea = null) => {
@@ -37,10 +36,7 @@ const getTrace = (data, source) => {
   };
 };
 
-const getName = (settings) =>
-  settings.source === 'plankton'
-    ? nameToLabelMapping[settings.index]
-    : nameToLabelMapping[settings.envParam];
+const getName = (settings) => settings.feature;
 
 const CombinedLinePlot = ({
   point,

@@ -1,16 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
-import {
-  nameToLabelMapping,
-  mapGlobeTitleStyle,
-  sequentialColors,
-} from '../constants';
-import {
-  generateColorStops,
-  generateColorbarTicks,
-  getColorscaleForIndex,
-  getColorDomainForIndex,
-} from '../utils';
+import { colors, mapGlobeTitleStyle } from '../constants';
+import { generateColorStops, generateColorbarTicks } from '../utils';
 
 const containerStyle = {
   width: '100%',
@@ -29,38 +20,29 @@ const plotWrapperStyle = {
 
 const MapDisplay = ({
   year,
-  index,
-  group,
+  feature = 0,
   scenario,
   model,
-  sourceType = 'plankton',
   onPointClick,
+  zoomedArea,
   onZoomedAreaChange,
   selectedPoint,
-  selectedArea,
-  zoomedArea,
 }) => {
   const [lats, setLats] = useState([]);
   const [lons, setLons] = useState([]);
   const [data, setData] = useState([]);
-  const [minValue, setMinValue] = useState(null);
-  const [maxValue, setMaxValue] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [colorscale, setColorscale] = useState(generateColorStops(sequentialColors));
-  const [isZoomed, setIsZoomed] = useState(false);
 
-  const uiRevisionKey = useMemo(
-    () => `${year}-${index}-${group ?? ''}-${scenario}-${model}`,
-    [year, index, group, scenario, model]
-  );
+  const colorscale = useMemo(() => generateColorStops(colors), []);
 
-  // Reset zoom when dataset changes
-  useEffect(() => {
-    setIsZoomed(false);
-  }, [uiRevisionKey]);
+  const uiRevisionKey = useMemo(() => `${year}-${feature}-${scenario}-${model}`, [
+    year,
+    feature,
+    scenario,
+    model,
+  ]);
 
-  // Fetch data
   useEffect(() => {
     const controller = new AbortController();
     const signal = controller.signal;
@@ -68,13 +50,7 @@ const MapDisplay = ({
     const fetchData = async () => {
       setLoading(true);
       try {
-        const url =
-          sourceType === 'environmental'
-            ? `/api/globe-data?source=env&year=${year}&index=${index}&scenario=${scenario}&model=${model}`
-            : `/api/map-data?year=${year}&index=${index}&group=${group}&scenario=${scenario}&model=${model}`;
-
-        setColorscale(getColorscaleForIndex(index, scenario));
-
+        const url = `/api/globe-data?variable=mean_values&time=${year - 2012}&feature=${feature}`;
         const response = await fetch(url, { signal });
         if (!response.ok) throw new Error('Network response was not ok');
 
@@ -82,15 +58,6 @@ const MapDisplay = ({
         setLats(json.lats || []);
         setLons(json.lons || []);
         setData(json.variable || []);
-
-        const [min, max] = getColorDomainForIndex(
-          json.minValue,
-          json.maxValue,
-          index,
-          scenario
-        );
-        setMinValue(min);
-        setMaxValue(max);
         setError(null);
       } catch (err) {
         if (err.name !== 'AbortError') {
@@ -104,16 +71,12 @@ const MapDisplay = ({
 
     fetchData();
     return () => controller.abort();
-  }, [year, index, group, scenario, model, sourceType]);
+  }, [year, feature, scenario, model]);
 
-  // Colorbar ticks
   const { tickvals, ticktext } = useMemo(() => {
-    if (minValue == null || maxValue == null || !colorscale.length)
-      return { tickvals: [], ticktext: [] };
-    return generateColorbarTicks(minValue, maxValue, colorscale.length / 2);
-  }, [minValue, maxValue, colorscale]);
+    return generateColorbarTicks(0, 1, colors.length);
+  }, []);
 
-  // Plot data
   const plotData = useMemo(() => {
     const heatmap = {
       type: 'heatmap',
@@ -122,9 +85,9 @@ const MapDisplay = ({
       y: lats,
       colorscale,
       zsmooth: false,
-      zmin: minValue,
-      zmax: maxValue,
-      hovertemplate: `Longitude: %{x}<br>Latitude: %{y}<br>${index}: %{z}<extra></extra>`,
+      zmin: 0,
+      zmax: 1,
+      hovertemplate: `Longitude: %{x}<br>Latitude: %{y}<br>Value: %{z}<extra></extra>`,
       colorbar: {
         tickcolor: 'white',
         tickfont: { color: 'white' },
@@ -149,22 +112,8 @@ const MapDisplay = ({
       ];
     }
     return [heatmap];
-  }, [
-    data,
-    lons,
-    lats,
-    colorscale,
-    minValue,
-    maxValue,
-    tickvals,
-    ticktext,
-    selectedPoint,
-    selectedArea,
-    index,
-    isZoomed,
-  ]);
+  }, [data, lons, lats, colorscale, tickvals, ticktext, selectedPoint]);
 
-  // Layout
   const layout = useMemo(() => {
     const baseLayout = {
       margin: { l: 10, r: 0, t: 60, b: 10 },
@@ -173,18 +122,8 @@ const MapDisplay = ({
       autosize: true,
       uirevision: uiRevisionKey,
       dragmode: 'zoom',
-      xaxis: {
-        showgrid: false,
-        zeroline: false,
-        showticklabels: false,
-        tickfont: { color: 'white' },
-      },
-      yaxis: {
-        showgrid: false,
-        zeroline: false,
-        showticklabels: false,
-        tickfont: { color: 'white' },
-      },
+      xaxis: { showgrid: false, zeroline: false, showticklabels: false },
+      yaxis: { showgrid: false, zeroline: false, showticklabels: false },
     };
 
     if (zoomedArea?.x && zoomedArea?.y) {
@@ -200,43 +139,24 @@ const MapDisplay = ({
     return baseLayout;
   }, [uiRevisionKey, zoomedArea]);
 
-  // Parse relayout ranges
   const parseRelayoutRanges = (eventData) => {
-    const xr = eventData['xaxis.range'] || [
-      eventData['xaxis.range[0]'],
-      eventData['xaxis.range[1]'],
-    ];
-    const yr = eventData['yaxis.range'] || [
-      eventData['yaxis.range[0]'],
-      eventData['yaxis.range[1]'],
-    ];
+    const xr = eventData['xaxis.range'] || [eventData['xaxis.range[0]'], eventData['xaxis.range[1]']];
+    const yr = eventData['yaxis.range'] || [eventData['yaxis.range[0]'], eventData['yaxis.range[1]']];
     if (xr?.[0] != null && xr?.[1] != null && yr?.[0] != null && yr?.[1] != null) {
       return { x: xr, y: yr };
     }
     return null;
   };
 
-  // Handle zoom/relayout
   const handleRelayout = (eventData) => {
     if (eventData['xaxis.autorange'] || eventData['yaxis.autorange']) {
-      setIsZoomed(false);
       onZoomedAreaChange?.(null);
       return;
     }
-
     const ranges = parseRelayoutRanges(eventData);
-    if (ranges) {
-      setIsZoomed(true);
-      onZoomedAreaChange?.(prev => {
-        if (JSON.stringify(prev) !== JSON.stringify(ranges)) {
-          return ranges;
-        }
-        return prev;
-      });
-    }
+    if (ranges) onZoomedAreaChange?.(ranges);
   };
 
-  // Handle point click
   const handlePointClick = useCallback(
     (evt) => {
       if (!evt.points?.length) return;
@@ -246,21 +166,11 @@ const MapDisplay = ({
     [onPointClick]
   );
 
-  const fullTitle = useMemo(() => {
-    const readableIndex = nameToLabelMapping[index] || index;
-    const readableGroup = group ? ` and ${group}` : '';
-    return `${readableIndex}${readableGroup} predicted by ${scenario} on ${model} in ${year}`;
-  }, [index, group, scenario, model, year]);
-
   return (
     <div style={containerStyle}>
-      <div style={mapGlobeTitleStyle}>{fullTitle}</div>
+      <div style={mapGlobeTitleStyle}>{feature}</div>
       {error && <div style={{ color: 'red' }}>{error}</div>}
-      {!loading && !error && data.length === 0 && (
-        <div style={{ color: 'gray' }}>
-          No data available for this selection
-        </div>
-      )}
+      {!loading && !error && data.length === 0 && <div style={{ color: 'gray' }}>No data available</div>}
       <div style={plotWrapperStyle}>
         <Plot
           data={plotData}
@@ -269,12 +179,7 @@ const MapDisplay = ({
           style={{ width: '100%', height: '100%' }}
           onRelayout={handleRelayout}
           onClick={handlePointClick}
-          config={{
-            displayModeBar: false,
-            responsive: true,
-            displaylogo: false,
-            showTips: false,
-          }}
+          config={{ displayModeBar: false, responsive: true, displaylogo: false, showTips: false }}
         />
       </div>
     </div>

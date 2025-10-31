@@ -6,10 +6,7 @@ import {
   getLegendFromColorscale,
   getColorDomainForIndex,
 } from '../utils';
-import {
-  nameToLabelMapping,
-  mapGlobeTitleStyle,
-} from '../constants';
+import { mapGlobeTitleStyle } from '../constants';
 
 const GlobeDisplay = ({
   year,
@@ -32,7 +29,7 @@ const GlobeDisplay = ({
   const [cachedData, setCachedData] = useState({});
   const [isHovered, setIsHovered] = useState(false);
 
-  const readableIndex = nameToLabelMapping[index] || index;
+  const readableIndex = index;
   const readableGroup = group ? ` and ${group}` : '';
   const fullTitle = `${readableIndex}${readableGroup} predicted by ${scenario} on ${model} in ${year}`;
   const normalizedSelectedPoint = selectedPoint
