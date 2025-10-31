@@ -3,47 +3,34 @@ import Plot from 'react-plotly.js';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 
-// Utility helpers
-const buildUrl = (settings, point, startYear, endYear, zoomedArea = null) => {
+// URL builder for monthly time axis
+const buildUrl = (settings, point, startMonth, endMonth, zoomedArea = null) => {
   const base = zoomedArea
     ? `/api/line-data?xMin=${zoomedArea.x[0]}&xMax=${zoomedArea.x[1]}&yMin=${zoomedArea.y[0]}&yMax=${zoomedArea.y[1]}`
     : `/api/line-data?x=${point.x}&y=${point.y}`;
 
-  return (
-    `${base}&startYear=${startYear}&endYear=${endYear}` +
-    `&index=${encodeURIComponent(settings.index)}` +
-    `&group=${encodeURIComponent(settings.group || '')}` +
-    `&scenario=${encodeURIComponent(settings.scenario)}` +
-    `&model=${encodeURIComponent(settings.model)}` +
-    `&envParam=${encodeURIComponent(settings.envParam)}`
-  );
+  return `${base}&startMonth=${startMonth}&endMonth=${endMonth}`;
 };
 
-// Extracts the correct trace from backend data
-const getTrace = (data, source) => {
-  if (!data) return null;
-
-  const isPlankton = source === 'plankton';
-  const variable = isPlankton ? data.variable : data.environmental_variable;
-
-  if (!variable) return null;
+// Extracts trace data from backend response
+const getTrace = (data) => {
+  if (!data || !data.variable) return null;
 
   return {
-    x: data.years,
-    y: variable.values,
-    std: variable.std || [],
-    name: variable.name,
+    x: data.months,
+    y: data.variable.values,
+    std: data.variable.std || [],
   };
 };
 
-const getName = (settings) => settings.feature;
+const getName = (settings) => settings.feature || settings.label || 'Feature';
 
 const CombinedLinePlot = ({
   point,
   leftSettings,
   rightSettings,
-  startYear,
-  endYear,
+  startMonth,
+  endMonth,
   zoomedArea,
 }) => {
   const [leftData, setLeftData] = useState(null);
@@ -52,7 +39,7 @@ const CombinedLinePlot = ({
   const [rightAreaData, setRightAreaData] = useState(null);
   const [error, setError] = useState(null);
 
-  // Fetch data from backend
+  // Fetch data for both sides
   useEffect(() => {
     if (point.x == null || point.y == null) return;
 
@@ -61,43 +48,37 @@ const CombinedLinePlot = ({
         setError(null);
 
         const [leftRes, rightRes, leftAreaRes, rightAreaRes] = await Promise.all([
-          fetch(buildUrl(leftSettings, point, startYear, endYear)).then((r) => r.json()),
-          fetch(buildUrl(rightSettings, point, startYear, endYear)).then((r) => r.json()),
+          fetch(buildUrl(leftSettings, point, startMonth, endMonth)).then((r) => r.json()),
+          fetch(buildUrl(rightSettings, point, startMonth, endMonth)).then((r) => r.json()),
           zoomedArea
-            ? fetch(buildUrl(leftSettings, point, startYear, endYear, zoomedArea)).then((r) => r.json())
+            ? fetch(buildUrl(leftSettings, point, startMonth, endMonth, zoomedArea)).then((r) => r.json())
             : null,
           zoomedArea
-            ? fetch(buildUrl(rightSettings, point, startYear, endYear, zoomedArea)).then((r) => r.json())
+            ? fetch(buildUrl(rightSettings, point, startMonth, endMonth, zoomedArea)).then((r) => r.json())
             : null,
         ]);
 
-        setLeftData(getTrace(leftRes, leftSettings.source));
-        setRightData(getTrace(rightRes, rightSettings.source));
-
-        if (zoomedArea) {
-          setLeftAreaData(leftAreaRes ? getTrace(leftAreaRes, leftSettings.source) : null);
-          setRightAreaData(rightAreaRes ? getTrace(rightAreaRes, rightSettings.source) : null);
-        } else {
-          setLeftAreaData(null);
-          setRightAreaData(null);
-        }
+        setLeftData(getTrace(leftRes));
+        setRightData(getTrace(rightRes));
+        setLeftAreaData(zoomedArea ? getTrace(leftAreaRes) : null);
+        setRightAreaData(zoomedArea ? getTrace(rightAreaRes) : null);
       } catch (err) {
         setError(err.message || 'Error fetching data');
       }
     };
 
     fetchData();
-  }, [point, zoomedArea, leftSettings, rightSettings, startYear, endYear]);
+  }, [point, zoomedArea, leftSettings, rightSettings, startMonth, endMonth]);
 
-  // CSV download handler
+  // CSV export handler
   const handleDownload = () => {
     if (!leftData || !rightData) return;
 
-    const csvHeader = ['Year', getName(leftSettings), getName(rightSettings)].join(',');
-    const csvRows = leftData.x.map((year, i) => {
+    const csvHeader = ['Month', getName(leftSettings), getName(rightSettings)].join(',');
+    const csvRows = leftData.x.map((month, i) => {
       const leftVal = leftData.y[i] ?? '';
       const rightVal = rightData.y[i] ?? '';
-      return `${year},${leftVal},${rightVal}`;
+      return `${month},${leftVal},${rightVal}`;
     });
 
     const csvContent = [csvHeader, ...csvRows].join('\n');
@@ -112,24 +93,23 @@ const CombinedLinePlot = ({
     URL.revokeObjectURL(url);
   };
 
-  // Layout configuration
+  // Layout config
   const layout = useMemo(() => {
     const title = zoomedArea
-      ? `Zoomed Area Mean (±1 SD) of ${getName(leftSettings)}<br> and ${getName(rightSettings)}`
-      : `${getName(leftSettings)} and<br> ${getName(rightSettings)} at ${point.x.toFixed(2)}°E, ${point.y.toFixed(2)}°N`;
+      ? `Zoomed Area Mean (±1 SD) of ${getName(leftSettings)}<br>and ${getName(rightSettings)}`
+      : `${getName(leftSettings)} and<br>${getName(rightSettings)} at ${point.x.toFixed(2)}°E, ${point.y.toFixed(2)}°N`;
 
     return {
-      margin: { l: 70, r: 70, t: 70, b: 50, pad: 2 },
+      margin: { l: 70, r: 70, t: 70, b: 50 },
       title: { text: title, font: { color: 'white' } },
       paper_bgcolor: 'rgba(18, 18, 18, 0.6)',
       plot_bgcolor: 'rgba(18, 18, 18, 0.6)',
       xaxis: {
-        title: { text: 'Year', font: { color: 'white' } },
+        title: { text: 'Month', font: { color: 'white' } },
         tickfont: { color: 'white' },
         linecolor: 'white',
         tickcolor: 'white',
         gridcolor: '#444',
-        zeroline: false,
       },
       yaxis: {
         title: getName(leftSettings),
@@ -149,23 +129,20 @@ const CombinedLinePlot = ({
     };
   }, [leftSettings, rightSettings, point, zoomedArea]);
 
-  // Render states
   if (error) return <div style={{ color: 'red' }}>Error loading chart: {error}</div>;
   if (!leftData || !rightData) return null;
 
-  // Build Plot traces
   const leftTraceData = zoomedArea && leftAreaData ? leftAreaData : leftData;
   const rightTraceData = zoomedArea && rightAreaData ? rightAreaData : rightData;
 
   const plotData = [];
 
-  // Left mean and std
+  // Left side
   if (leftTraceData) {
     const yUpper = leftTraceData.y.map((v, i) => v + (leftTraceData.std?.[i] ?? 0));
     const yLower = leftTraceData.y.map((v, i) => v - (leftTraceData.std?.[i] ?? 0));
 
     if (zoomedArea) {
-      // SD shaded region
       plotData.push({
         x: [...leftTraceData.x, ...leftTraceData.x.slice().reverse()],
         y: [...yUpper, ...yLower.slice().reverse()],
@@ -187,13 +164,12 @@ const CombinedLinePlot = ({
     });
   }
 
-  // Right mean and std
+  // Right side
   if (rightTraceData) {
     const yUpper = rightTraceData.y.map((v, i) => v + (rightTraceData.std?.[i] ?? 0));
     const yLower = rightTraceData.y.map((v, i) => v - (rightTraceData.std?.[i] ?? 0));
 
     if (zoomedArea) {
-      // SD shaded region
       plotData.push({
         x: [...rightTraceData.x, ...rightTraceData.x.slice().reverse()],
         y: [...yUpper, ...yLower.slice().reverse()],
@@ -235,8 +211,6 @@ const CombinedLinePlot = ({
           style={{ width: '100%' }}
           useResizeHandler={true}
         />
-
-        {/* Download button */}
         <Tooltip title="Download CSV">
           <IconButton
             onClick={handleDownload}
