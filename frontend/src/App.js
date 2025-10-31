@@ -233,14 +233,10 @@ const App = () => {
             <CombinedLinePlot
               point={selectedPoint}
               zoomedArea={area}
-              leftSettings={{
-                feature: panel1.feature,
-              }}
-              rightSettings={{
-                feature: panel2.feature,
-              }}
+              leftSettings={{ feature: panel1.feature }}
+              rightSettings={{ feature: panel2.feature, }}
               startMonth={0}
-              endMonth={12}
+              endMonth={11}
             />
           </Box>
         </Box>
