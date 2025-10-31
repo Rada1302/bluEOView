@@ -1,11 +1,9 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import Globe from 'react-globe.gl';
 import {
-  getColorscaleForIndex,
   generateColorStops,
   getInterpolatedColorFromValue,
   getLegendFromColorscale,
-  getColorDomainForIndex,
 } from '../utils';
 import { mapGlobeTitleStyle, colors } from '../constants';
 

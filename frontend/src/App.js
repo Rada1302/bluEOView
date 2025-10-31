@@ -21,7 +21,7 @@ const App = () => {
     month: 0,
     debouncedMonth: 0,
     view: 'map',
-    feature: 'Shannon Diversity Index',
+    feature: 'a_shannon',
   };
 
   // Top-level UI / modal state
