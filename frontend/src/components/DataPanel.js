@@ -11,6 +11,7 @@ import {
 import { Lock, LockOpen } from '@mui/icons-material';
 import GlobeDisplay from './GlobeDisplay';
 import MapDisplay from './MapDisplay';
+import { monthNames } from '../constants';
 
 const DataPanel = ({
     panel,
@@ -27,6 +28,12 @@ const DataPanel = ({
     sharedZoom,
     onSharedZoomChange,
 }) => {
+
+    const [localMonth, setLocalMonth] = React.useState(panel.month);
+
+    React.useEffect(() => {
+        setLocalMonth(panel.month);
+    }, [panel.month]);
 
     return (
         <Box
@@ -66,7 +73,7 @@ const DataPanel = ({
             <Box sx={{ mb: 1, px: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
                     <Typography color="white" variant="subtitle">
-                        Month: {panel.month}
+                        Month: {monthNames[panel.month]}
                     </Typography>
                     <Box
                         sx={{
@@ -83,9 +90,12 @@ const DataPanel = ({
                 </Box>
                 <MuiSlider
                     min={0}
-                    max={12}
-                    value={panel.month}
+                    max={11}
+                    value={localMonth}
                     onChange={(e, v) => {
+                        setLocalMonth(v);
+                    }}
+                    onChangeCommitted={(e, v) => {
                         setPanel(prev => ({ ...prev, month: v }));
                         debouncedUpdateMonth(v);
                         if (onMonthChange) onMonthChange(v);
