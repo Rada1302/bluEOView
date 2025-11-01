@@ -8,11 +8,7 @@ import InfoModal from './components/InfoModal';
 import debounce from 'lodash/debounce';
 import './App.css';
 import { Box, Typography, Divider, IconButton, Collapse } from '@mui/material';
-import {
-  infoMessages,
-  shortProjectDescription,
-  projectDescription,
-} from './constants';
+import { infoMessages } from './constants';
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
 
 const App = () => {
@@ -28,10 +24,6 @@ const App = () => {
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [infoModalShortText, setInfoModalShortText] = useState('');
   const [infoModalTitle, setInfoModalTitle] = useState('');
-  const [projectModalOpen, setProjectModalOpen] = useState(() => {
-    const hideModal = localStorage.getItem('hideProjectExplanation');
-    return !hideModal;
-  });
 
   const [selectedPoint, setSelectedPoint] = useState({ x: 0, y: 0 });
   const [area, setArea] = useState(null);
@@ -94,16 +86,6 @@ const App = () => {
 
   return (
     <Box className="App" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-
-      {/* Project Explanation Modal */}
-      <InfoModal
-        open={projectModalOpen}
-        onClose={() => setProjectModalOpen(false)}
-        title={"Welcome to bluEOView!"}
-        shortText={shortProjectDescription}
-        longText={projectDescription}
-        showDontShowAgain={true}
-      />
 
       {/* Header */}
       <Box component="header" sx={{ backgroundColor: 'transparent', mt: 2, px: 4, position: 'relative', textAlign: 'center' }}>
