@@ -148,7 +148,15 @@ def get_line_data():
             var = var.sortby("latitude")
 
             if x is not None and y is not None:
-                series = var.sel(latitude=y, longitude=x, method="nearest")
+                # find nearest latitude index
+                lat_values = ds["latitude"].values
+                lat_idx = np.abs(lat_values - y).argmin()
+
+                # find nearest longitude index
+                lon_values = ds["longitude"].values
+                lon_idx = np.abs(lon_values - x).argmin()
+
+                series = var.isel(latitude=lat_idx, longitude=lon_idx)
                 std_series = None
             elif None not in (x_min, x_max, y_min, y_max):
                 lat_slice = slice(y_min, y_max) if ds["latitude"].values[0] < ds["latitude"].values[-1] else slice(y_max, y_min)
