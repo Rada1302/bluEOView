@@ -27,10 +27,6 @@ export const plotWrapperStyle = {
     height: '100%',
 };
 
-// TODO: replace with actual project descriptions
-export const shortProjectDescription = "";
-export const projectDescription = "";
-
 export const infoMessages = {
     "Feature general": "Select the feature you want to visualize on the map or globe. Each feature provides different insights into species diversity and distribution.",
     "a_shannon": "Measures species diversity considering both abundance and evenness. Higher values indicate greater diversity.",

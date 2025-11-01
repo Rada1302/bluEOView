@@ -42,20 +42,12 @@ const MapDisplay = ({
         const url = `/api/globe-data?variable=mean_values&time=${month}&feature=${feature}`;
         const response = await fetch(url, { signal });
         if (!response.ok) throw new Error('Network response was not ok');
-
         const json = await response.json();
         setLats(json.lats || []);
         setLons(json.lons || []);
         setData(json.variable || []);
-        setError(null);
-
-        // Calculate and set min and max values
-        if (json.variable && json.variable.length > 0) {
-          const allValues = json.variable.flat();
-          const validValues = allValues.filter((val) => val != null && !isNaN(val));
-          setMinValue(Math.min(...validValues));
-          setMaxValue(Math.max(...validValues));
-        }
+        setMinValue(json.minValue ?? null);
+        setMaxValue(json.maxValue ?? null);
       } catch (err) {
         if (err.name !== 'AbortError') {
           console.error('Error fetching map data:', err);

@@ -46,45 +46,51 @@ def _resolve_feature_index(ds, variable_name: str, feature_param):
         else:
             raise ValueError(f"Unknown feature '{feature_param}'. Expected one of: {feature_names}")
 
-
 def read_netcdf_map(file_path: str, variable_name: str, feature_index: int = 0, time_index: int = 0):
     """
     Return map (lat/lon grid) for given variable, feature index and month index.
+    Guarantees:
+     - lats ascending (from min to max)
+     - variable is a list-of-lists where variable[lat_idx][lon_idx] corresponds to lats[lat_idx], lons[lon_idx]
     """
-    file_lock.acquire()
-    try:
+    with file_lock:
         with xr.open_dataset(file_path, decode_times=False) as ds:
             if variable_name not in ds:
                 raise ValueError(f"Variable '{variable_name}' not found in dataset")
 
             var = ds[variable_name]
+            # use isel with named dims so ordering doesn't matter
+            arr = var.isel({ 'feature': feature_index, 'time': time_index }) if 'feature' in var.dims and 'time' in var.dims else var
 
+            # replace fill values with NaN
             fill_val = var.attrs.get("_FillValue", None)
-            arr = var.isel(feature=feature_index, time=time_index)
-
             if fill_val is not None:
                 arr = arr.where(arr != fill_val)
 
-            arr = arr.sortby("latitude")
-
+            # make sure lat is ascending
+            # arr.sortby returns a DataArray; store whether we sorted
+            arr = arr.sortby("latitude", ascending=True)
+            lats = arr["latitude"].values.tolist()
+            lons = arr["longitude"].values.tolist()
             arr_np = arr.values.astype(float)
-            lats = arr.latitude.values.tolist()
-            lons = arr.longitude.values.tolist()
             arr_list = np.where(np.isfinite(arr_np), np.round(arr_np, 3), None).tolist()
 
+            # compute min/max on finite values
             finite = arr_np[np.isfinite(arr_np)]
-            min_value = float(np.nan) if finite.size == 0 else float(np.nanmin(finite))
-            max_value = float(np.nan) if finite.size == 0 else float(np.nanmax(finite))
+            if finite.size == 0:
+                min_value = None
+                max_value = None
+            else:
+                min_value = float(np.nanmin(finite))
+                max_value = float(np.nanmax(finite))
 
             return {
                 "lats": lats,
                 "lons": lons,
                 "variable": arr_list,
-                "minValue": round(min_value, 3) if not np.isnan(min_value) else None,
-                "maxValue": round(max_value, 3) if not np.isnan(max_value) else None,
+                "minValue": round(min_value, 3) if min_value is not None else None,
+                "maxValue": round(max_value, 3) if max_value is not None else None,
             }
-    finally:
-        file_lock.release()
 
 
 @app.route("/api/globe-data", methods=["GET"])
@@ -98,22 +104,20 @@ def get_globe_data():
 
     def _task():
         with xr.open_dataset(NC_PATH, decode_times=False) as ds:
-            feat_idx, _ = _resolve_feature_index(ds, variable_name, feature_param)
-        return read_netcdf_map(NC_PATH, variable_name, feature_index=feat_idx, time_index=time_index)
+            feat_idx, feat_name = _resolve_feature_index(ds, variable_name, feature_param)
+        # read map once, using feature index resolved above
+        return read_netcdf_map(NC_PATH, variable_name, feature_index=feat_idx, time_index=time_index), feat_name
 
     future = executor.submit(_task)
     try:
-        data = future.result()
+        data, feat_name = future.result()
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": f"Failed to read dataset: {e}"}), 500
 
-    with xr.open_dataset(NC_PATH, decode_times=False) as ds:
-        feat_idx, feat_name = _resolve_feature_index(ds, variable_name, feature_param)
     data["feature"] = feat_name
     return jsonify(data)
-
 
 @app.route("/api/line-data", methods=["GET"])
 def get_line_data():

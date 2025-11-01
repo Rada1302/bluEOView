@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
-import { featureNames, nameToLabelMapping } from '../constants';
+import { featureNames } from '../constants';
 
 // URL builder for monthly time axis
 const buildUrl = (settings, point, startMonth, endMonth, zoomedArea = null) => {
@@ -16,10 +16,9 @@ const buildUrl = (settings, point, startMonth, endMonth, zoomedArea = null) => {
 // Extracts trace data from backend response
 const getTrace = (data) => {
   if (!data || !data.variable) return null;
-
   return {
-    x: data.months,
-    y: data.variable.values,
+    x: data.months || [],
+    y: data.variable.values || [],
     std: data.variable.std || [],
   };
 };
@@ -43,25 +42,34 @@ const CombinedLinePlot = ({
   // Fetch data from backend
   useEffect(() => {
     if (point.x == null || point.y == null) return;
+    const controller = new AbortController();
+    const signal = controller.signal;
 
     const fetchData = async () => {
       try {
         setError(null);
+        const requests = [
+          fetch(buildUrl(leftSettings, point, startMonth, endMonth), { signal }),
+          fetch(buildUrl(rightSettings, point, startMonth, endMonth), { signal }),
+        ];
+        if (zoomedArea) {
+          requests.push(fetch(buildUrl(leftSettings, point, startMonth, endMonth, zoomedArea), { signal }));
+          requests.push(fetch(buildUrl(rightSettings, point, startMonth, endMonth, zoomedArea), { signal }));
+        }
 
-        const [leftRes, rightRes, leftAreaRes, rightAreaRes] = await Promise.all([
-          fetch(buildUrl(leftSettings, point, startMonth, endMonth)).then((r) => r.json()),
-          fetch(buildUrl(rightSettings, point, startMonth, endMonth)).then((r) => r.json()),
-          zoomedArea
-            ? fetch(buildUrl(leftSettings, point, startMonth, endMonth, zoomedArea)).then((r) => r.json())
-            : null,
-          zoomedArea
-            ? fetch(buildUrl(rightSettings, point, startMonth, endMonth, zoomedArea)).then((r) => r.json())
-            : null,
-        ]);
+        const responses = await Promise.all(requests);
+        for (const r of responses) {
+          if (r && !r.ok) {
+            const text = await r.text();
+            throw new Error(`Backend error: ${r.status} ${text}`);
+          }
+        }
 
+        const jsons = await Promise.all(responses.map(r => (r ? r.json() : null)));
+
+        const [leftRes, rightRes, leftAreaRes, rightAreaRes] = jsons;
         setLeftData(getTrace(leftRes));
         setRightData(getTrace(rightRes));
-
         if (zoomedArea) {
           setLeftAreaData(leftAreaRes ? getTrace(leftAreaRes) : null);
           setRightAreaData(rightAreaRes ? getTrace(rightAreaRes) : null);
@@ -70,11 +78,13 @@ const CombinedLinePlot = ({
           setRightAreaData(null);
         }
       } catch (err) {
+        if (err.name === 'AbortError') return;
         setError(err.message || 'Error fetching data');
       }
     };
 
     fetchData();
+    return () => controller.abort();
   }, [point, zoomedArea, leftSettings, rightSettings, startMonth, endMonth]);
 
   // CSV download handler

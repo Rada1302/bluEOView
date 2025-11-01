@@ -57,7 +57,7 @@ const GlobeDisplay = ({
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  const fetchData = async (month) => {
+  const fetchData = async (month, feature) => {
     const cacheKey = `${month}_${feature}`;
 
     if (cachedData[cacheKey]) {
@@ -67,43 +67,52 @@ const GlobeDisplay = ({
       return;
     }
 
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     try {
       const url = `/api/globe-data?variable=mean_values&time=${month}&feature=${feature}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Network response was not ok');
+      const response = await fetch(url, { signal });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Network response was not ok: ${response.status} ${text}`);
+      }
+
       const data = await response.json();
+      const minVal = data.minValue ?? null;
+      const maxVal = data.maxValue ?? null;
 
-      const flatData = data.variable.flat();
-      const minVal = Math.min(...flatData.filter((v) => !isNaN(v) && v != null));
-      const maxVal = Math.max(...flatData.filter((v) => !isNaN(v) && v != null));
+      const lats = data.lats.slice();
+      const vars = data.variable.slice();
 
-      const transformed = [...data.lats]
-        .filter((_, latIdx) => latIdx % 2 === 0)
-        .map((lat, latIdx) => {
-          return data.lons
-            .filter((_, lonIdx) => lonIdx % 2 === 0)
-            .map((lon, lonIdx) => {
-              const realLatIdx = data.lats.length - 1 - latIdx * 2;
-              const realLonIdx = lonIdx * 2;
-              const value = data.variable[realLatIdx][realLonIdx];
-              if (value == null || isNaN(value)) return null;
-              return {
-                lat,
-                lng: lon,
-                size: value !== 0 ? 0.01 : 0,
-                color: getInterpolatedColorFromValue(
-                  value,
-                  minVal,
-                  maxVal,
-                  generateColorStops(colors)
-                ),
-              };
-            });
-        })
-        .flat()
-        .filter((p) => p !== null);
+      const step = 1; // downsample
+      const transformed = [];
 
-      setCachedData((prev) => ({
+      for (let latIdx = 0; latIdx < lats.length; latIdx += step) {
+        const lat = lats[latIdx];
+        for (let lonIdx = 0; lonIdx < data.lons.length; lonIdx += step) {
+          const rawLon = data.lons[lonIdx];
+          const lon = rawLon > 180 ? rawLon - 360 : rawLon;
+
+          const value = vars[latIdx]?.[lonIdx];
+          if (value == null || isNaN(value)) continue;
+
+          // Flip latitude for globe (north on top)
+          transformed.push({
+            lat: -lat, // Flip vertically
+            lng: lon,
+            size: value !== 0 ? 0.01 : 0,
+            color: getInterpolatedColorFromValue(
+              value,
+              minVal,
+              maxVal,
+              generateColorStops(colors),
+            ),
+          });
+        }
+      }
+
+      setCachedData(prev => ({
         ...prev,
         [cacheKey]: { pointsData: transformed, minValue: minVal, maxValue: maxVal },
       }));
@@ -112,13 +121,14 @@ const GlobeDisplay = ({
       setMaxValue(maxVal);
       setError(null);
     } catch (err) {
+      if (err.name === 'AbortError') return;
       console.error('Error fetching globe data:', err);
       setError('Failed to load data');
     }
   };
 
   useEffect(() => {
-    fetchData(month);
+    fetchData(month, feature);
   }, [month, feature]);
 
   useEffect(() => {
@@ -135,7 +145,7 @@ const GlobeDisplay = ({
       return { colors: [], labels: [] };
     }
     return getLegendFromColorscale(colorscale, minValue, maxValue);
-  }, [minValue, maxValue, colors]);
+  }, [minValue, maxValue]);
 
   const handlePointClick = (lng, lat) => {
     if (onPointClick) onPointClick(lng, lat);
@@ -212,7 +222,6 @@ const GlobeDisplay = ({
             zIndex: 10,
           }}
         >
-          {/* Color slices */}
           <div
             style={{
               flex: 2,
@@ -235,7 +244,6 @@ const GlobeDisplay = ({
             ))}
           </div>
 
-          {/* Labels */}
           <div
             style={{
               flex: 3,

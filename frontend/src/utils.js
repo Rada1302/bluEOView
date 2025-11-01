@@ -1,5 +1,3 @@
-import { colors } from './constants';
-
 export const generateColorStops = (colors) => {
     const step = 1 / colors.length;
     return colors.flatMap((color, i) => {

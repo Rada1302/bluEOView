@@ -7,8 +7,6 @@ import {
   Typography,
   Link,
   Button,
-  List,
-  ListItem,
 } from '@mui/material';
 
 const ReferencesModal = ({ open, onClose }) => (
