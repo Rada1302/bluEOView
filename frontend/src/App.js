@@ -6,9 +6,10 @@ import Footer from './components/Footer';
 import InfoModal from './components/InfoModal';
 import debounce from 'lodash/debounce';
 import './App.css';
-import { Box, Typography, Divider, Paper } from '@mui/material';
+import { Box, Typography, Divider, Paper, Button } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { infoMessages, BlueCloudLogo } from './constants';
+import Tutorial from './components/Tutorial'
 
 const App = () => {
   // Initial panel definition
@@ -18,6 +19,9 @@ const App = () => {
     view: 'map',
     feature: 'a_shannon',
   };
+  // Tutorial state
+  const [tutorialActive, setTutorialActive] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
 
   // Top-level UI / modal state
   const [infoModalOpen, setInfoModalOpen] = useState(false);
@@ -82,6 +86,15 @@ const App = () => {
 
   return (
     <Box className="App" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {/* Tutorial Overlay */}
+      <Tutorial
+        start={tutorialActive}
+        onFinish={() => {
+          setTutorialActive(false);
+          setTutorialStep(0);
+        }}
+        setTutorialStep={setTutorialStep}
+      />
 
       {/* Header */}
       <Box
@@ -101,7 +114,7 @@ const App = () => {
         {/* Logo */}
         <Box sx={{
           position: 'absolute',
-          top: '10%',
+          top: '22%',
           left: 16,
           gap: 1,
           display: 'flex',
@@ -121,7 +134,7 @@ const App = () => {
               alignItems: 'center',
               justifyContent: 'center',
               width: 200,
-              height: 70,
+              height: 50,
               backgroundColor: 'rgba(0, 0, 0, 0.25)',
               borderRadius: 1,
               textDecoration: 'none',
@@ -137,12 +150,19 @@ const App = () => {
               src={BlueCloudLogo.src}
               alt={BlueCloudLogo.alt}
               sx={{
-                maxHeight: '65px',
+                maxHeight: '45px',
                 maxWidth: '190px',
                 objectFit: 'contain',
               }}
             />
           </Paper>
+        </Box>
+        {/* Start Tutorial Button */}
+        <Box sx={{ position: 'absolute', top: '30%', left: 230, zIndex: 1500 }}>
+          <Button
+            variant="outlined"
+            color="white"
+            onClick={() => setTutorialActive(true)}>Start Tutorial</Button>
         </Box>
 
         {/* Title + Subtitle grouped together */}

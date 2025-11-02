@@ -1,3 +1,48 @@
+// Tutorial steps
+export const tooltips = [
+    null, // Step 0: Welcome modal
+    { // Step 1
+        text: "You can compare different scenarios, models, and datasets side by side.",
+        top: "30%",
+        left: "50%",
+    },
+    { // Step 2
+        text: "Each data panel allows you to switch between a flat map and a 3D globe for convenience.",
+        top: "30%",
+        left: "25%",
+    },
+    { // Step 3
+        text: "Use the year slider to visualize changes over time.",
+        top: "35%",
+        left: "16%",
+    },
+    { // Step 4
+        text: "Each panel has a corresponding control panel, where you can select the scenario, model, and other parameters to display.",
+        top: "60%",
+        left: "50%",
+    },
+    { // Step 5
+        text: "Use locks to sync or separate panels. By default, the left and right data panels are synchronized, meaning the year, scenario, and model are linked. You can unlock these parameters individually if you want to compare different settings.",
+        top: "65%",
+        left: "50%",
+    },
+    { // Step 6
+        text: "For any parameter, click on the info icons to learn more about its meaning and source.",
+        top: "60%",
+        left: "40%",
+    },
+    { // Step 7
+        text: "You can select any point on the map or globe to explore how parameters evolve over time.",
+        top: "75%",
+        left: "17%",
+    },
+    { // Step 8
+        text: "Observe the time series for the selected point.",
+        top: "43%",
+        left: "50%",
+    }
+];
+
 // Color palette
 export const colors = [
     '#440154',
