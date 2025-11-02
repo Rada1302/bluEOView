@@ -12,6 +12,7 @@ import { Lock, LockOpen } from '@mui/icons-material';
 import GlobeDisplay from './GlobeDisplay';
 import MapDisplay from './MapDisplay';
 import { monthNames } from '../constants';
+import ControlPanel from './ControlPanel';
 
 const DataPanel = ({
     panel,
@@ -27,6 +28,7 @@ const DataPanel = ({
     onLockToggle,
     sharedZoom,
     onSharedZoomChange,
+    openInfoModal,
 }) => {
 
     const [localMonth, setLocalMonth] = React.useState(panel.month);
@@ -47,45 +49,78 @@ const DataPanel = ({
                 zIndex: 'auto',
             }}
         >
-            {/* View Switch */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                <FormControl component="fieldset">
-                    <RadioGroup
-                        row
-                        value={panel.view}
-                        onChange={(e) => setPanel({ ...panel, view: e.target.value })}
-                    >
-                        <FormControlLabel
-                            value="map"
-                            control={<Radio sx={{ color: 'white', '&.Mui-checked': { color: 'white' } }} />}
-                            label={<Typography color="white">Map</Typography>}
-                        />
-                        <FormControlLabel
-                            value="globe"
-                            control={<Radio sx={{ color: 'white', '&.Mui-checked': { color: 'white' } }} />}
-                            label={<Typography color="white">Globe</Typography>}
-                        />
-                    </RadioGroup>
-                </FormControl>
+            <Box sx={{ flex: 1, minWidth: 200 }}>
+                <ControlPanel
+                    feature={panel.feature}
+                    onFeatureChange={(e) => setPanel(prev => ({ ...prev, feature: e.target.value }))}
+                    openInfoModal={openInfoModal}
+                />
             </Box>
 
             {/* Year Slider */}
             <Box sx={{ mb: 1, px: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
-                    <Typography color="white" variant="subtitle">
-                        Month: {monthNames[panel.month]}
-                    </Typography>
-                    <Box
-                        sx={{
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            color: 'white',
-                            '&:hover': { color: '#1976d2' },
-                        }}
-                        onClick={() => onLockToggle && onLockToggle()}
-                    >
-                        {lockMonth ? <Lock /> : <LockOpen />}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between', // 👈 separates left/right groups
+                        mb: 1,
+                        gap: 2,
+                    }}
+                >
+                    {/* LEFT SIDE: Month + Lock */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography color="white" variant="subtitle">
+                            Month: {monthNames[panel.month]}
+                        </Typography>
+                        <Box
+                            sx={{
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: 'white',
+                                '&:hover': { color: '#1976d2' },
+                            }}
+                            onClick={() => onLockToggle && onLockToggle()}
+                        >
+                            {lockMonth ? <Lock /> : <LockOpen />}
+                        </Box>
+                    </Box>
+
+                    {/* RIGHT SIDE: Map/Globe View Switch */}
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <FormControl component="fieldset">
+                            <RadioGroup
+                                row
+                                value={panel.view}
+                                onChange={(e) => setPanel({ ...panel, view: e.target.value })}
+                            >
+                                <FormControlLabel
+                                    value="map"
+                                    control={
+                                        <Radio
+                                            sx={{
+                                                color: 'white',
+                                                '&.Mui-checked': { color: 'white' },
+                                            }}
+                                        />
+                                    }
+                                    label={<Typography color="white">Map</Typography>}
+                                />
+                                <FormControlLabel
+                                    value="globe"
+                                    control={
+                                        <Radio
+                                            sx={{
+                                                color: 'white',
+                                                '&.Mui-checked': { color: 'white' },
+                                            }}
+                                        />
+                                    }
+                                    label={<Typography color="white">Globe</Typography>}
+                                />
+                            </RadioGroup>
+                        </FormControl>
                     </Box>
                 </Box>
                 <MuiSlider
@@ -130,7 +165,7 @@ const DataPanel = ({
                     />
                 )}
             </Box>
-        </Box>
+        </Box >
     );
 };
 

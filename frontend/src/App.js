@@ -129,50 +129,11 @@ const App = () => {
             onLockToggle={handleMonthLockToggle}
             sharedZoom={sharedZoom}
             onSharedZoomChange={setSharedZoom}
+            openInfoModal={openInfoModal}
           />
         </Box>
 
         <Box sx={{ flex: '1 1 500px', minWidth: 500 }}>
-          <Box
-            sx={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 1,
-            }}
-          >
-            {/* Control Panels */}
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'row',
-                flex: 1,
-                gap: 1,
-                justifyContent: 'space-between',
-                mb: 1,
-                zIndex: 'auto',
-                position: 'relative',
-              }}
-            >
-              <Box sx={{ flex: 1, minWidth: 200 }}>
-                <ControlPanel
-                  feature={panel1.feature}
-                  onFeatureChange={(e) => setPanel1(prev => ({ ...prev, feature: e.target.value }))}
-                  openInfoModal={openInfoModal}
-                />
-              </Box>
-
-              {/* Right Control Panel */}
-              <Box sx={{ flex: 1, minWidth: 200 }}>
-                <ControlPanel
-                  feature={panel2.feature}
-                  onFeatureChange={(e) => setPanel2(prev => ({ ...prev, feature: e.target.value }))}
-                  openInfoModal={openInfoModal}
-                />
-              </Box>
-            </Box>
-          </Box>
-
           <Box
             sx={{
               flexShrink: 0,
@@ -207,6 +168,7 @@ const App = () => {
             onLockToggle={handleMonthLockToggle}
             sharedZoom={sharedZoom}
             onSharedZoomChange={setSharedZoom}
+            openInfoModal={openInfoModal}
           />
         </Box>
       </Box>
