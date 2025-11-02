@@ -184,9 +184,28 @@ const App = () => {
               fontSize: '1.25rem',
               color: 'white',
               mt: 0.5,
+              display: 'flex',
+              alignItems: 'center',
             }}
           >
-            Visualisation of CEPHALOPOD
+            Visualisation of{' '}
+            <Box
+              component="span"
+              sx={{ display: 'flex', alignItems: 'center', height: '1em' }}
+            >
+              <Box
+                component="img"
+                src="/assets/cephalopod_logo.png"
+                alt="C"
+                sx={{
+                  height: '1em',
+                  width: 'auto',
+                  verticalAlign: 'middle',
+                  ml: 0.5,
+                }}
+              />
+            </Box>
+            EPHALOPOD
           </Typography>
         </Box>
 
