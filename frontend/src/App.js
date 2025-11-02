@@ -7,9 +7,8 @@ import ControlPanel from './components/ControlPanel';
 import InfoModal from './components/InfoModal';
 import debounce from 'lodash/debounce';
 import './App.css';
-import { Box, Typography, Divider, IconButton, Collapse } from '@mui/material';
+import { Box, Typography, Divider } from '@mui/material';
 import { infoMessages } from './constants';
-import { ExpandLess, ExpandMore } from '@mui/icons-material';
 
 const App = () => {
   // Initial panel definition
@@ -55,9 +54,6 @@ const App = () => {
       debouncedUpdateMonth2.cancel();
     };
   }, [debouncedUpdateMonth1, debouncedUpdateMonth2]);
-
-  //  Collapsible state
-  const [panelsCollapsed, setPanelsCollapsed] = useState(false);
 
   // Info modal helpers
   const openInfoModal = (title, key) => {
@@ -137,31 +133,6 @@ const App = () => {
         </Box>
 
         <Box sx={{ flex: '1 1 500px', minWidth: 500 }}>
-          {/* Collapsible title */}
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: 'rgba(0, 0, 0, 0.25)',
-              backdropFilter: 'blur(8px)',
-              px: 2,
-              py: 1,
-              mb: 1,
-              borderRadius: 1,
-            }}
-          >
-            <Typography variant="h6" sx={{ color: 'white' }}>Control Panels</Typography>
-            <IconButton
-              onClick={() => setPanelsCollapsed(!panelsCollapsed)}
-              sx={{
-                color: '#fff',
-                '&:hover': { color: '#4FC3F7', transform: 'scale(1.1)', transition: '0.2s' },
-              }}
-            >
-              {panelsCollapsed ? <ExpandMore /> : <ExpandLess />}
-            </IconButton>
-          </Box>
           <Box
             sx={{
               flex: 1,
@@ -170,38 +141,36 @@ const App = () => {
               gap: 1,
             }}
           >
-            {/* Collapsible content */}
-            <Collapse in={!panelsCollapsed}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'row',
-                  flex: 1,
-                  gap: 1,
-                  justifyContent: 'space-between',
-                  mb: 1,
-                  zIndex: 'auto',
-                  position: 'relative',
-                }}
-              >
-                <Box sx={{ flex: 1, minWidth: 200 }}>
-                  <ControlPanel
-                    feature={panel1.feature}
-                    onFeatureChange={(e) => setPanel1(prev => ({ ...prev, feature: e.target.value }))}
-                    openInfoModal={openInfoModal}
-                  />
-                </Box>
-
-                {/* Right Control Panel */}
-                <Box sx={{ flex: 1, minWidth: 200 }}>
-                  <ControlPanel
-                    feature={panel2.feature}
-                    onFeatureChange={(e) => setPanel2(prev => ({ ...prev, feature: e.target.value }))}
-                    openInfoModal={openInfoModal}
-                  />
-                </Box>
+            {/* Control Panels */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'row',
+                flex: 1,
+                gap: 1,
+                justifyContent: 'space-between',
+                mb: 1,
+                zIndex: 'auto',
+                position: 'relative',
+              }}
+            >
+              <Box sx={{ flex: 1, minWidth: 200 }}>
+                <ControlPanel
+                  feature={panel1.feature}
+                  onFeatureChange={(e) => setPanel1(prev => ({ ...prev, feature: e.target.value }))}
+                  openInfoModal={openInfoModal}
+                />
               </Box>
-            </Collapse>
+
+              {/* Right Control Panel */}
+              <Box sx={{ flex: 1, minWidth: 200 }}>
+                <ControlPanel
+                  feature={panel2.feature}
+                  onFeatureChange={(e) => setPanel2(prev => ({ ...prev, feature: e.target.value }))}
+                  openInfoModal={openInfoModal}
+                />
+              </Box>
+            </Box>
           </Box>
 
           <Box
