@@ -90,6 +90,8 @@ const CombinedLinePlot = ({ point, leftSettings, rightSettings }) => {
     plot_bgcolor: 'rgba(18, 18, 18, 0.6)',
     xaxis: {
       title: { text: 'Month', font: { color: 'white' } },
+      tickvals: Array.from({ length: 13 }, (_, i) => i + 1),
+      ticktext: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Annual Mean'],
       tickfont: { color: 'white' },
       gridcolor: '#444',
       linecolor: 'white',
