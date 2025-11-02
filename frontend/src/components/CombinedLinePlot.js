@@ -117,26 +117,35 @@ const CombinedLinePlot = ({
       : `${getName(leftSettings)} and ${getName(rightSettings)}<br> at ${point.x.toFixed(2)}°E, ${point.y.toFixed(2)}°N`;
 
     return {
-      margin: { l: 70, r: 70, t: 70, b: 50, pad: 2 },
       title: { text: title, font: { color: 'white' } },
       paper_bgcolor: 'rgba(18, 18, 18, 0.6)',
       plot_bgcolor: 'rgba(18, 18, 18, 0.6)',
       xaxis: {
-        title: { text: 'Month', font: { color: 'white' } },
+        title: {
+          text: 'Month',
+          font: { color: 'white' },
+        },
         tickfont: { color: 'white' },
         linecolor: 'white',
         tickcolor: 'white',
         gridcolor: '#444',
         zeroline: false,
+        automargin: true,
       },
       yaxis: {
-        title: getName(leftSettings),
+        title: {
+          text: getName(leftSettings),
+          standoff: 10,
+        },
         color: 'cyan',
         linecolor: 'cyan',
         tickcolor: 'cyan',
       },
       yaxis2: {
-        title: getName(rightSettings),
+        title: {
+          text: getName(rightSettings),
+          standoff: 10,
+        },
         color: 'orange',
         side: 'right',
         overlaying: 'y',
@@ -216,42 +225,38 @@ const CombinedLinePlot = ({
   }
 
   return (
-    <Box
-      sx={{
-        p: 2,
-        backgroundColor: 'rgba(0, 0, 0, 0.25)',
-        borderRadius: 1,
-        flex: 1,
-        position: 'relative',
-      }}
-    >
-      <Box sx={{ position: 'relative' }}>
-        <Plot
-          data={plotData}
-          layout={layout}
-          config={{ displayModeBar: false }}
-          style={{ width: '100%' }}
-          useResizeHandler={true}
-        />
+    <Box sx={{
+      borderRadius: 1,
+      position: 'relative',
+    }}>
+      <Plot
+        data={plotData}
+        layout={layout}
+        config={{ displayModeBar: false }}
+        style={{
+          width: '100%',
+          height: '100%',
+        }}
+        useResizeHandler={true}
+      />
 
-        {/* Download button */}
-        <Tooltip title="Download CSV">
-          <IconButton
-            onClick={handleDownload}
-            sx={{
-              position: 'absolute',
-              top: 4,
-              right: 8,
-              color: 'white',
-              backgroundColor: 'rgba(0,0,0,0.4)',
-              '&:hover': { backgroundColor: 'rgba(0,0,0,0.6)' },
-              zIndex: 10,
-            }}
-          >
-            <DownloadIcon />
-          </IconButton>
-        </Tooltip>
-      </Box>
+      {/* Download button */}
+      <Tooltip title="Download CSV">
+        <IconButton
+          onClick={handleDownload}
+          sx={{
+            position: 'absolute',
+            top: 20,
+            right: 20,
+            color: 'white',
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            '&:hover': { backgroundColor: 'rgba(0,0,0,0.6)' },
+            zIndex: 10,
+          }}
+        >
+          <DownloadIcon />
+        </IconButton>
+      </Tooltip>
     </Box>
   );
 };
