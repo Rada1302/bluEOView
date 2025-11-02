@@ -1,6 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Plot from 'react-plotly.js';
-import { colors, mapGlobeTitleStyle, featureNames, monthNames, containerStyle, plotWrapperStyle } from '../constants';
+import {
+  colors,
+  mapGlobeTitleStyle,
+  featureNames,
+  monthNames,
+  containerStyle,
+  plotWrapperStyle,
+} from '../constants';
 import { generateColorStops, generateColorbarTicks } from '../utils';
 
 const MapDisplay = ({
@@ -22,30 +29,31 @@ const MapDisplay = ({
   const [colorscale, setColorscale] = useState(generateColorStops(colors));
   const [isZoomed, setIsZoomed] = useState(false);
 
-  const uiRevisionKey = useMemo(
-    () => `${month}-${feature}`,
-    [month, feature]
-  );
+  const uiRevisionKey = useMemo(() => `${month}-${feature}`, [month, feature]);
 
   // Reset zoom when dataset changes
   useEffect(() => {
     setIsZoomed(false);
   }, [uiRevisionKey]);
 
+  // Fetch diversity map data from backend
   useEffect(() => {
     const controller = new AbortController();
     const signal = controller.signal;
 
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
+
       try {
-        const url = `/api/globe-data?variable=mean_values&time=${month}&feature=${feature}`;
+        const url = `/api/diversity-map?feature=${feature}&timeIndex=${month}`;
         const response = await fetch(url, { signal });
         if (!response.ok) throw new Error('Network response was not ok');
         const json = await response.json();
+
         setLats(json.lats || []);
         setLons(json.lons || []);
-        setData(json.variable || []);
+        setData(json.mean || []);
         setMinValue(json.minValue ?? null);
         setMaxValue(json.maxValue ?? null);
       } catch (err) {
@@ -82,7 +90,7 @@ const MapDisplay = ({
       zsmooth: false,
       zmin: minValue,
       zmax: maxValue,
-      hovertemplate: `Longitude: %{x}<br>Latitude: %{y}<br>${featureNames[feature]}: %{z}<extra></extra>`,
+      hovertemplate: `Longitude: %{x}<br>Latitude: %{y}<br>${featureNames[feature] || 'Feature'}: %{z}<extra></extra>`,
       colorbar: {
         tickcolor: 'white',
         tickfont: { color: 'white' },
@@ -118,9 +126,7 @@ const MapDisplay = ({
     tickvals,
     ticktext,
     selectedPoint,
-    selectedArea,
     feature,
-    isZoomed,
   ]);
 
   // Layout
@@ -158,7 +164,7 @@ const MapDisplay = ({
     return baseLayout;
   }, [uiRevisionKey, zoomedArea]);
 
-  // Parse relayout ranges
+  // Handle zooming
   const parseRelayoutRanges = (eventData) => {
     const xr = eventData['xaxis.range'] || [
       eventData['xaxis.range[0]'],
@@ -174,7 +180,6 @@ const MapDisplay = ({
     return null;
   };
 
-  // Handle zoom/relayout
   const handleRelayout = (eventData) => {
     if (eventData['xaxis.autorange'] || eventData['yaxis.autorange']) {
       setIsZoomed(false);
@@ -205,7 +210,9 @@ const MapDisplay = ({
   );
 
   const fullTitle = useMemo(() => {
-    return `${featureNames[feature]} in ${monthNames[month]}`;
+    const featName = featureNames[feature] || `Feature ${feature}`;
+    const timeName = monthNames[month] || `Time ${month}`;
+    return `${featName} in ${timeName}`;
   }, [feature, month]);
 
   return (
@@ -213,9 +220,7 @@ const MapDisplay = ({
       <div style={mapGlobeTitleStyle}>{fullTitle}</div>
       {error && <div style={{ color: 'red' }}>{error}</div>}
       {!loading && !error && data.length === 0 && (
-        <div style={{ color: 'gray' }}>
-          No data available for this selection
-        </div>
+        <div style={{ color: 'gray' }}>No data available for this selection</div>
       )}
       <div style={plotWrapperStyle}>
         <Plot

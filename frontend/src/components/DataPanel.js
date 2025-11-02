@@ -63,12 +63,12 @@ const DataPanel = ({
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between', // 👈 separates left/right groups
+                        justifyContent: 'space-between',
                         mb: 1,
                         gap: 2,
                     }}
                 >
-                    {/* LEFT SIDE: Month + Lock */}
+                    {/* Month + Lock */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography color="white" variant="subtitle">
                             Month: {monthNames[panel.month]}
@@ -87,7 +87,7 @@ const DataPanel = ({
                         </Box>
                     </Box>
 
-                    {/* RIGHT SIDE: Map/Globe View Switch */}
+                    {/* Map/Globe View Switch */}
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <FormControl component="fieldset">
                             <RadioGroup

@@ -14,8 +14,8 @@ const Tutorial = ({ start, onFinish, setTutorialStep }) => {
             <InfoModal
                 open={step === 0}
                 onClose={() => setStep(1)}
-                title="Welcome to the MAPMAKER Tutorial"
-                shortText="Learn how to explore plankton diversity scenarios."
+                title="Welcome to the BLUEOVIEW Tutorial"
+                shortText="Learn how to explore different features."
                 buttonText="Start Tutorial"
             />
 

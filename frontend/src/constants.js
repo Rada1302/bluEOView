@@ -1,6 +1,6 @@
 // Tutorial steps
 export const tooltips = [
-    null, // Step 0: Welcome modal
+    null,
     { // Step 1
         text: "You can compare different scenarios, models, and datasets side by side.",
         top: "30%",
