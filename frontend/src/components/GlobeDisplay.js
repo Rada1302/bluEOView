@@ -7,27 +7,25 @@ import {
 } from '../utils';
 import { mapGlobeTitleStyle, colors, monthNames, featureNames } from '../constants';
 
-const GlobeDisplay = ({
-  month,
-  feature,
-  onPointClick,
-  selectedPoint,
-}) => {
+const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint }) => {
   const containerRef = useRef(null);
   const globeRef = useRef();
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [pointsData, setPointsData] = useState([]);
   const [error, setError] = useState(null);
-  const [minValue, setMinValue] = useState(0);
-  const [maxValue, setMaxValue] = useState(1);
+  const [minValue, setMinValue] = useState(null);
+  const [maxValue, setMaxValue] = useState(null);
   const [cachedData, setCachedData] = useState({});
   const [isHovered, setIsHovered] = useState(false);
 
-  const fullTitle = `${featureNames[feature]} in ${monthNames[month]}`;
+  const readableFeature = featureNames[feature] || feature;
+  const fullTitle = `${readableFeature} in ${monthNames[month]}`;
   const normalizedSelectedPoint = selectedPoint
     ? { lat: selectedPoint.y, lng: selectedPoint.x }
     : null;
+
+  const colorscale = useMemo(() => generateColorStops(colors), []);
 
   const createHtmlElement = () => {
     const el = document.createElement('div');
@@ -43,13 +41,12 @@ const GlobeDisplay = ({
     return el;
   };
 
+  // Handle resizing
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight,
-        });
+        const { offsetWidth, offsetHeight } = containerRef.current;
+        setDimensions({ width: offsetWidth, height: offsetHeight });
       }
     };
     updateDimensions();
@@ -57,72 +54,60 @@ const GlobeDisplay = ({
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
+  // Fetch map data from backend
   const fetchData = async (month, feature) => {
     const cacheKey = `${month}_${feature}`;
-
     if (cachedData[cacheKey]) {
-      setPointsData(cachedData[cacheKey].pointsData);
-      setMinValue(cachedData[cacheKey].minValue);
-      setMaxValue(cachedData[cacheKey].maxValue);
+      const cached = cachedData[cacheKey];
+      setPointsData(cached.pointsData);
+      setMinValue(cached.minValue);
+      setMaxValue(cached.maxValue);
       return;
     }
 
-    const controller = new AbortController();
-    const signal = controller.signal;
-
     try {
-      const url = `/api/globe-data?variable=mean_values&time=${month}&feature=${feature}`;
-      const response = await fetch(url, { signal });
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Network response was not ok: ${response.status} ${text}`);
-      }
+      const params = new URLSearchParams({
+        feature,
+        timeIndex: month.toString(),
+      });
 
+      const response = await fetch(`/api/diversity-map?${params.toString()}`);
+      if (!response.ok) throw new Error(`Server error ${response.status}`);
       const data = await response.json();
-      const minVal = data.minValue ?? null;
-      const maxVal = data.maxValue ?? null;
 
-      const lats = data.lats.slice();
-      const vars = data.variable.slice();
+      const { lats, lons, mean, minValue: minVal, maxValue: maxVal } = data;
 
-      const step = 1; // downsample
       const transformed = [];
+      const step = 2; // Downsample for performance
 
+      // Reverse points vertically (north on top)
       for (let latIdx = 0; latIdx < lats.length; latIdx += step) {
-        const lat = lats[latIdx];
-        for (let lonIdx = 0; lonIdx < data.lons.length; lonIdx += step) {
-          const rawLon = data.lons[lonIdx];
-          const lon = rawLon > 180 ? rawLon - 360 : rawLon;
-
-          const value = vars[latIdx]?.[lonIdx];
+        const lat = -lats[latIdx]; // Flip vertically
+        for (let lonIdx = 0; lonIdx < lons.length; lonIdx += step) {
+          const lon = lons[lonIdx] > 180 ? lons[lonIdx] - 360 : lons[lonIdx];
+          const value = mean[latIdx]?.[lonIdx];
           if (value == null || isNaN(value)) continue;
 
-          // Flip latitude for globe (north on top)
           transformed.push({
-            lat: -lat, // Flip vertically
+            lat,
             lng: lon,
             size: value !== 0 ? 0.01 : 0,
-            color: getInterpolatedColorFromValue(
-              value,
-              minVal,
-              maxVal,
-              generateColorStops(colors),
-            ),
+            color: getInterpolatedColorFromValue(value, minVal, maxVal, colorscale),
           });
         }
       }
 
-      setCachedData(prev => ({
+      setCachedData((prev) => ({
         ...prev,
         [cacheKey]: { pointsData: transformed, minValue: minVal, maxValue: maxVal },
       }));
+
       setPointsData(transformed);
       setMinValue(minVal);
       setMaxValue(maxVal);
       setError(null);
     } catch (err) {
-      if (err.name === 'AbortError') return;
-      console.error('Error fetching globe data:', err);
+      console.error('Error fetching map data:', err);
       setError('Failed to load data');
     }
   };
@@ -133,19 +118,17 @@ const GlobeDisplay = ({
 
   useEffect(() => {
     if (globeRef.current) {
-      globeRef.current.controls().minDistance = 250;
-      globeRef.current.controls().maxDistance = 400;
-      globeRef.current.controls().autoRotate = false;
+      const controls = globeRef.current.controls();
+      controls.minDistance = 250;
+      controls.maxDistance = 400;
+      controls.autoRotate = false;
     }
   }, []);
 
   const legendData = useMemo(() => {
-    const colorscale = generateColorStops(colors);
-    if (minValue == null || maxValue == null || colors.length === 0) {
-      return { colors: [], labels: [] };
-    }
+    if (minValue == null || maxValue == null) return { colors: [], labels: [] };
     return getLegendFromColorscale(colorscale, minValue, maxValue);
-  }, [minValue, maxValue]);
+  }, [minValue, maxValue, colorscale]);
 
   const handlePointClick = (lng, lat) => {
     if (onPointClick) onPointClick(lng, lat);
@@ -222,6 +205,7 @@ const GlobeDisplay = ({
             zIndex: 10,
           }}
         >
+          {/* Color bar */}
           <div
             style={{
               flex: 2,
@@ -244,6 +228,7 @@ const GlobeDisplay = ({
             ))}
           </div>
 
+          {/* Labels */}
           <div
             style={{
               flex: 3,
