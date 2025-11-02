@@ -3,12 +3,12 @@ import CombinedLinePlot from './components/CombinedLinePlot';
 import ReferencesButton from './components/ReferencesButton';
 import DataPanel from './components/DataPanel';
 import Footer from './components/Footer';
-import ControlPanel from './components/ControlPanel';
 import InfoModal from './components/InfoModal';
 import debounce from 'lodash/debounce';
 import './App.css';
-import { Box, Typography, Divider } from '@mui/material';
-import { infoMessages } from './constants';
+import { Box, Typography, Divider, Paper } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import { infoMessages, BlueCloudLogo } from './constants';
 
 const App = () => {
   // Initial panel definition
@@ -84,12 +84,96 @@ const App = () => {
     <Box className="App" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
       {/* Header */}
-      <Box component="header" sx={{ backgroundColor: 'transparent', mt: 2, px: 4, position: 'relative', textAlign: 'center' }}>
-        <Typography variant="h1" sx={{ fontSize: '3.5rem', fontWeight: 'bold', color: 'white' }}>BluEOView</Typography>
-        <Typography variant="h6" sx={{ fontSize: '1.25rem', color: 'white', mt: 1 }}>
-          Visualisation of CEPHALOPOD
-        </Typography>
-        <ReferencesButton />
+      <Box
+        component="header"
+        sx={{
+          backgroundColor: 'transparent',
+          mt: 2,
+          px: 4,
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 3,
+          textAlign: 'center',
+        }}
+      >
+        {/* Logo */}
+        <Box sx={{
+          position: 'absolute',
+          top: '10%',
+          left: 16,
+          gap: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-start',
+          flexWrap: 'wrap',
+        }}>
+          <Paper
+            key={BlueCloudLogo.alt}
+            component="a"
+            href={BlueCloudLogo.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            elevation={2}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 200,
+              height: 70,
+              backgroundColor: 'rgba(0, 0, 0, 0.25)',
+              borderRadius: 1,
+              textDecoration: 'none',
+              transition: 'box-shadow 0.2s ease-in-out',
+              '&:hover': {
+                boxShadow: (theme) => theme.shadows[6],
+                backgroundColor: alpha('#000000', 0.03),
+              },
+            }}
+          >
+            <Box
+              component="img"
+              src={BlueCloudLogo.src}
+              alt={BlueCloudLogo.alt}
+              sx={{
+                maxHeight: '65px',
+                maxWidth: '190px',
+                objectFit: 'contain',
+              }}
+            />
+          </Paper>
+        </Box>
+
+        {/* Title + Subtitle grouped together */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Typography
+            variant="h1"
+            sx={{
+              fontSize: '3.5rem',
+              fontWeight: 'bold',
+              color: 'white',
+              lineHeight: 1,
+            }}
+          >
+            BluEOView
+          </Typography>
+          <Typography
+            variant="h6"
+            sx={{
+              fontSize: '1.25rem',
+              color: 'white',
+              mt: 0.5,
+            }}
+          >
+            Visualisation of CEPHALOPOD
+          </Typography>
+        </Box>
+
+        {/* References Button */}
+        <Box>
+          <ReferencesButton />
+        </Box>
       </Box>
 
       <Divider sx={{ bgcolor: 'rgba(255,255,255,0.3)', mt: 1, mb: 2 }} />
@@ -176,7 +260,7 @@ const App = () => {
       <Divider sx={{ bgcolor: 'rgba(255,255,255,0.3)', my: 2 }} />
 
       <Footer />
-    </Box>
+    </Box >
   );
 };
 

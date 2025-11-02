@@ -65,6 +65,12 @@ export const featureOptions = [
     { label: 'Inverse Simpson Index', value: 'a_invsimpson' },
 ];
 
+export const BlueCloudLogo = {
+    alt: 'Blue-Cloud',
+    src: '/assets/BlueCloud_logo.png',
+    href: 'https://blue-cloud.org',
+}
+
 export const logos = [
     {
         alt: 'ETH Zurich',
@@ -81,11 +87,6 @@ export const logos = [
         src: '/assets/EMBL_logo.png',
         href: 'https://www.embl.org/about/',
     },
-    {
-        alt: 'Blue-Cloud',
-        src: '/assets/BlueCloud_logo.png',
-        href: 'https://blue-cloud.org',
-    }
 ];
 
 export const mapGlobeTitleStyle = {
