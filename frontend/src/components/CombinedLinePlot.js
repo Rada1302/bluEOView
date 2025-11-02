@@ -89,7 +89,7 @@ const CombinedLinePlot = ({ point, leftSettings, rightSettings }) => {
     paper_bgcolor: 'rgba(18, 18, 18, 0.6)',
     plot_bgcolor: 'rgba(18, 18, 18, 0.6)',
     xaxis: {
-      title: { text: 'Time', font: { color: 'white' } },
+      title: { text: 'Month', font: { color: 'white' } },
       tickfont: { color: 'white' },
       gridcolor: '#444',
       linecolor: 'white',

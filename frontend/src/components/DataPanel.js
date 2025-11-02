@@ -124,8 +124,8 @@ const DataPanel = ({
                     </Box>
                 </Box>
                 <MuiSlider
-                    min={0}
-                    max={11}
+                    min={1}
+                    max={13}
                     value={localMonth}
                     onChange={(e, v) => {
                         setLocalMonth(v);
