@@ -114,7 +114,7 @@ const App = () => {
         {/* Logo */}
         <Box sx={{
           position: 'absolute',
-          top: '22%',
+          top: '15%',
           left: 16,
           gap: 1,
           display: 'flex',
@@ -158,7 +158,7 @@ const App = () => {
           </Paper>
         </Box>
         {/* Start Tutorial Button */}
-        <Box sx={{ position: 'absolute', top: '30%', left: 230, zIndex: 1500 }}>
+        <Box sx={{ position: 'absolute', top: '23%', left: 230, zIndex: 1500 }}>
           <Button
             variant="outlined"
             color="white"

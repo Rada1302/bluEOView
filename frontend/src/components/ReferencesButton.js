@@ -11,7 +11,7 @@ const ReferencesButton = ({ sx, ...buttonProps }) => {
   return (
     <Box sx={{
       position: 'absolute',
-      top: '10%',
+      top: '15%',
       right: 16,
       gap: 1,
       display: 'flex',
