@@ -85,7 +85,11 @@ const App = () => {
   };
 
   return (
-    <Box className="App" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box className="App" sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: '100vh',
+    }}>
       {/* Tutorial Overlay */}
       <Tutorial
         start={tutorialActive}
@@ -227,6 +231,7 @@ const App = () => {
 
       <Box
         sx={{
+          flexGrow: 1,
           display: 'flex',
           flexDirection: 'row',
           gap: 1,
