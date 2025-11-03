@@ -105,8 +105,6 @@ const App = () => {
         component="header"
         sx={{
           backgroundColor: 'transparent',
-          mt: 2,
-          px: 4,
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
@@ -118,8 +116,8 @@ const App = () => {
         {/* Logo */}
         <Box sx={{
           position: 'absolute',
-          top: '15%',
-          left: 16,
+          top: 10,
+          left: 8,
           gap: 1,
           display: 'flex',
           flexDirection: 'column',
@@ -137,8 +135,8 @@ const App = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 200,
-              height: 50,
+              width: 110,
+              height: 95,
               backgroundColor: 'rgba(0, 0, 0, 0.25)',
               borderRadius: 1,
               textDecoration: 'none',
@@ -154,19 +152,12 @@ const App = () => {
               src={BlueCloudLogo.src}
               alt={BlueCloudLogo.alt}
               sx={{
-                maxHeight: '45px',
-                maxWidth: '190px',
+                maxHeight: '95px',
+                maxWidth: '95px',
                 objectFit: 'contain',
               }}
             />
           </Paper>
-        </Box>
-        {/* Start Tutorial Button */}
-        <Box sx={{ position: 'absolute', top: '23%', left: 230, zIndex: 1500 }}>
-          <Button
-            variant="outlined"
-            color="white"
-            onClick={() => setTutorialActive(true)}>Start Tutorial</Button>
         </Box>
 
         {/* Title + Subtitle grouped together */}
@@ -178,6 +169,7 @@ const App = () => {
               fontWeight: 'bold',
               color: 'white',
               lineHeight: 1,
+              mt: 2,
             }}
           >
             BluEOView
@@ -216,6 +208,14 @@ const App = () => {
         {/* References Button */}
         <Box>
           <ReferencesButton />
+        </Box>
+
+        {/* Start Tutorial Button */}
+        <Box sx={{ position: 'absolute', top: '55%', right: 16, zIndex: 1500 }}>
+          <Button
+            variant="outlined"
+            color="white"
+            onClick={() => setTutorialActive(true)}>Start Tutorial</Button>
         </Box>
       </Box>
 

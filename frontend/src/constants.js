@@ -113,7 +113,7 @@ export const featureOptions = [
 
 export const BlueCloudLogo = {
     alt: 'Blue-Cloud',
-    src: '/assets/BlueCloud_logo.png',
+    src: '/assets/BlueCloud_logo_top.png',
     href: 'https://blue-cloud.org',
 }
 
