@@ -202,10 +202,10 @@ const App = () => {
                 src="/assets/cephalopod_logo.png"
                 alt="C"
                 sx={{
-                  height: '1em',
+                  height: '2em',
                   width: 'auto',
                   verticalAlign: 'middle',
-                  ml: 0.5,
+                  ml: 1,
                 }}
               />
             </Box>
