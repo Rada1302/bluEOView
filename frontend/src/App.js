@@ -14,8 +14,8 @@ import Tutorial from './components/Tutorial'
 const App = () => {
   // Initial panel definition
   const initialPanel = {
-    month: 0,
-    debouncedMonth: 0,
+    month: 1,
+    debouncedMonth: 1,
     view: 'map',
     feature: 'a_shannon',
   };
