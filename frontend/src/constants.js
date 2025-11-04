@@ -136,7 +136,7 @@ export const logos = [
     {
         alt: 'EU',
         src: '/assets/EU_logo.png',
-        href: 'https://european-union.europa.eu/live-work-study/funding-grants-subsidies_en',
+        href: 'https://eosc.eu/eosc-about/calls-grants/',
     }
 ];
 
