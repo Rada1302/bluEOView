@@ -113,7 +113,7 @@ export const featureOptions = [
 
 export const BlueCloudLogo = {
     alt: 'Blue-Cloud',
-    src: '/assets/BlueCloud_logo_top.png',
+    src: '/assets/BlueCloud_logo.png',
     href: 'https://blue-cloud.org',
 }
 
@@ -133,6 +133,11 @@ export const logos = [
         src: '/assets/EMBL_logo.png',
         href: 'https://www.embl.org/about/',
     },
+    {
+        alt: 'EU',
+        src: '/assets/EU_logo.png',
+        href: 'https://european-union.europa.eu/live-work-study/funding-grants-subsidies_en',
+    }
 ];
 
 export const mapGlobeTitleStyle = {

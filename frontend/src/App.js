@@ -116,7 +116,7 @@ const App = () => {
         {/* Logo */}
         <Box sx={{
           position: 'absolute',
-          top: 10,
+          top: 25,
           left: 8,
           gap: 1,
           display: 'flex',
@@ -135,8 +135,8 @@ const App = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 110,
-              height: 95,
+              width: 350,
+              height: 70,
               backgroundColor: 'rgba(0, 0, 0, 0.25)',
               borderRadius: 1,
               textDecoration: 'none',
@@ -152,8 +152,8 @@ const App = () => {
               src={BlueCloudLogo.src}
               alt={BlueCloudLogo.alt}
               sx={{
-                maxHeight: '95px',
-                maxWidth: '95px',
+                maxWidth: '345px',
+                maxHeight: '65px',
                 objectFit: 'contain',
               }}
             />
