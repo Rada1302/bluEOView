@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import CombinedLinePlot from './components/CombinedLinePlot';
 import ReferencesButton from './components/ReferencesButton';
 import DataPanel from './components/DataPanel';
 import Footer from './components/Footer';
@@ -259,26 +258,6 @@ const App = () => {
             onSharedZoomChange={setSharedZoom}
             openInfoModal={openInfoModal}
           />
-        </Box>
-
-        <Box sx={{ flex: '1 1 500px', minWidth: 500 }}>
-          <Box
-            sx={{
-              flexShrink: 0,
-              position: 'relative',
-              zIndex: 'auto',
-            }}
-          >
-            {/* Combined line plot */}
-            <CombinedLinePlot
-              point={selectedPoint}
-              zoomedArea={area}
-              leftSettings={{ feature: panel1.feature }}
-              rightSettings={{ feature: panel2.feature, }}
-              startMonth={0}
-              endMonth={11}
-            />
-          </Box>
         </Box>
 
         <Box sx={{ flex: '1 1 500px', minWidth: 500 }}>
