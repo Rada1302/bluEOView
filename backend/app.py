@@ -13,7 +13,7 @@ executor = Executor(app)
 # Hidden backend-only path
 DATA_FILE = "data/output_diversity.nc"
 
-# Feature name → index mapping in NetCDF
+# Feature name to index mapping in NetCDF
 FEATURE_MAP = {
     "a_shannon": 0,
     "a_richness": 1,
@@ -28,10 +28,7 @@ def add_header(response):
     return response
 
 
-# -----------------------------
 #  Utility Functions
-# -----------------------------
-
 def read_netcdf(file_path: str, feature_name: str, month_index: int):
     """
     Reads a diversity NetCDF file and extracts the map for a given feature and month.
@@ -123,11 +120,7 @@ def get_timeseries(file_path: str, feature_name: str, x: float, y: float):
         file_lock.release()
     return data
 
-
-# -----------------------------
 #  API Endpoints
-# -----------------------------
-
 @app.route("/api/diversity-map", methods=["GET"])
 def diversity_map():
     """
@@ -162,9 +155,5 @@ def diversity_line():
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     return response
 
-
-# -----------------------------
-#  Main
-# -----------------------------
 if __name__ == "__main__":
     app.run(debug=False, threaded=True)
