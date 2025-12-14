@@ -119,7 +119,7 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
       const controls = globeRef.current.controls();
       controls.minDistance = 250;
       controls.maxDistance = 400;
-      controls.autoRotate = false;
+      controls.autoRotate = true;
     }
   }, []);
 
