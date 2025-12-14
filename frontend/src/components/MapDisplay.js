@@ -4,7 +4,6 @@ import {
   colors,
   mapGlobeTitleStyle,
   featureNames,
-  monthNames,
   containerStyle,
   plotWrapperStyle,
 } from '../constants';
@@ -18,6 +17,7 @@ const MapDisplay = ({
   selectedArea,
   onZoomedAreaChange,
   zoomedArea,
+  fullTitle,
 }) => {
   const [lats, setLats] = useState([]);
   const [lons, setLons] = useState([]);
@@ -208,12 +208,6 @@ const MapDisplay = ({
     },
     [onPointClick]
   );
-
-  const fullTitle = useMemo(() => {
-    const featName = featureNames[feature] || `Feature ${feature}`;
-    const timeName = monthNames[month] || `Time ${month}`;
-    return `${featName} in ${timeName}`;
-  }, [feature, month]);
 
   return (
     <div style={containerStyle}>

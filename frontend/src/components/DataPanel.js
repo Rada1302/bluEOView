@@ -11,7 +11,7 @@ import {
 import { Lock, LockOpen } from '@mui/icons-material';
 import GlobeDisplay from './GlobeDisplay';
 import MapDisplay from './MapDisplay';
-import { monthNames } from '../constants';
+import { monthNames, featureNames } from '../constants';
 import ControlPanel from './ControlPanel';
 
 const DataPanel = ({
@@ -32,6 +32,9 @@ const DataPanel = ({
 }) => {
 
     const [localMonth, setLocalMonth] = React.useState(panel.month);
+    const isAnnualMean = panel.month === 13;
+    const fullTitle = `${featureNames[panel.feature]} ${isAnnualMean ? (" (Annual Mean)") : "in " + monthNames[panel.month]}`;
+    const lockTitle = `${isAnnualMean ? "Annual Mean" : "Month: " + monthNames[panel.month]}`;
 
     React.useEffect(() => {
         setLocalMonth(panel.month);
@@ -57,7 +60,7 @@ const DataPanel = ({
                 />
             </Box>
 
-            {/* Year Slider */}
+            {/* Month Slider */}
             <Box sx={{ mb: 1, px: 1 }}>
                 <Box
                     sx={{
@@ -70,9 +73,7 @@ const DataPanel = ({
                 >
                     {/* Month + Lock */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography color="white" variant="subtitle">
-                            Month: {monthNames[panel.month]}
-                        </Typography>
+                        <Typography color="white" variant="subtitle"> {lockTitle} </Typography>
                         <Box
                             sx={{
                                 cursor: 'pointer',
@@ -154,6 +155,7 @@ const DataPanel = ({
                             onSharedZoomChange?.(area);
                         }}
                         zoomedArea={sharedZoom}
+                        fullTitle={fullTitle}
                     />
                 )}
                 {panel.view === 'globe' && (
@@ -162,6 +164,7 @@ const DataPanel = ({
                         feature={panel.feature}
                         onPointClick={(x, y) => setSelectedPoint({ x, y })}
                         selectedPoint={selectedPoint}
+                        fullTitle={fullTitle}
                     />
                 )}
             </Box>
