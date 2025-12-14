@@ -259,43 +259,10 @@ const App = () => {
             openInfoModal={openInfoModal}
           />
 
-          <DataPanel
-            panel={panel1}
-            setPanel={setPanel1}
-            debouncedMonth={debouncedMonth1}
-            debouncedUpdateMonth={debouncedUpdateMonth1}
-            setSelectedPoint={setSelectedPoint}
-            setArea={setArea}
-            selectedPoint={selectedPoint}
-            selectedArea={area}
-            lockMonth={lockMonth}
-            onMonthChange={(y) => handleMonthChange(setPanel1, setPanel2, y)}
-            onLockToggle={handleMonthLockToggle}
-            sharedZoom={sharedZoom}
-            onSharedZoomChange={setSharedZoom}
-            openInfoModal={openInfoModal}
-          />
         </Box>
 
         <Box sx={{ flex: '1 1 500px', minWidth: 500 }}>
           {/* Right DataPanel */}
-          <DataPanel
-            panel={panel2}
-            setPanel={setPanel2}
-            debouncedMonth={debouncedMonth2}
-            debouncedUpdateMonth={debouncedUpdateMonth2}
-            setSelectedPoint={setSelectedPoint}
-            setArea={setArea}
-            selectedPoint={selectedPoint}
-            selectedArea={area}
-            lockMonth={lockMonth}
-            onMonthChange={(y) => handleMonthChange(setPanel2, setPanel1, y)}
-            onLockToggle={handleMonthLockToggle}
-            sharedZoom={sharedZoom}
-            onSharedZoomChange={setSharedZoom}
-            openInfoModal={openInfoModal}
-          />
-
           <DataPanel
             panel={panel2}
             setPanel={setPanel2}

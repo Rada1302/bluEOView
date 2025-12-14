@@ -137,6 +137,7 @@ const DataPanel = ({
                         if (onMonthChange) onMonthChange(v);
                     }}
                     valueLabelDisplay="auto"
+                    valueLabelFormat={(v) => monthNames[v]}
                     sx={{ color: '#1976d2' }}
                 />
             </Box>
