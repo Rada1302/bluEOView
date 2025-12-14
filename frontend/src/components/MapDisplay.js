@@ -28,6 +28,7 @@ const MapDisplay = ({
   const [loading, setLoading] = useState(false);
   const [colorscale, setColorscale] = useState(generateColorStops(colors));
   const [isZoomed, setIsZoomed] = useState(false);
+  const [stdData, setStdData] = useState([]);
 
   const uiRevisionKey = useMemo(() => `${month}-${feature}`, [month, feature]);
 
@@ -44,7 +45,6 @@ const MapDisplay = ({
     const fetchData = async () => {
       setLoading(true);
       setError(null);
-
       try {
         const url = `/api/diversity-map?feature=${feature}&timeIndex=${month}`;
         const response = await fetch(url, { signal });
@@ -54,6 +54,7 @@ const MapDisplay = ({
         setLats(json.lats || []);
         setLons(json.lons || []);
         setData(json.mean || []);
+        setStdData(json.sd || []);
         setMinValue(json.minValue ?? null);
         setMaxValue(json.maxValue ?? null);
       } catch (err) {
@@ -79,30 +80,41 @@ const MapDisplay = ({
 
   // Plot data
   const plotData = useMemo(() => {
-    const flippedData = data.slice().reverse();
+    const flippedMean = data.slice().reverse();
+    const SD = stdData.slice();
 
-    const heatmap = {
+    const meanHeatmap = {
       type: 'heatmap',
-      z: flippedData,
+      z: flippedMean,
       x: lons,
       y: lats,
       colorscale,
       zsmooth: false,
       zmin: minValue,
       zmax: maxValue,
-      hovertemplate: `Longitude: %{x}<br>Latitude: %{y}<br>${featureNames[feature] || 'Feature'}: %{z}<extra></extra>`,
-      colorbar: {
-        tickcolor: 'white',
-        tickfont: { color: 'white' },
-        tickmode: 'array',
-        tickvals,
-        ticktext,
-      },
+      colorbar: { title: 'Mean', tickcolor: 'white', tickfont: { color: 'white' } },
+      hovertemplate: `Lon: %{x}<br>Lat: %{y}<br>Mean: %{z}<extra></extra>`,
+      xaxis: 'x',
+      yaxis: 'y',
+    };
+
+    const sdHeatmap = {
+      type: 'heatmap',
+      z: SD,
+      x: lons,
+      y: lats,
+      colorscale,
+      zsmooth: false,
+      colorbar: { title: 'Std Dev', tickcolor: 'white', tickfont: { color: 'white' } },
+      hovertemplate: `Lon: %{x}<br>Lat: %{y}<br>Std Dev: %{z}<extra></extra>`,
+      xaxis: 'x2',
+      yaxis: 'y2',
     };
 
     if (selectedPoint) {
       return [
-        heatmap,
+        meanHeatmap,
+        sdHeatmap,
         {
           type: 'scatter',
           mode: 'text',
@@ -115,9 +127,10 @@ const MapDisplay = ({
         },
       ];
     }
-    return [heatmap];
+    return [meanHeatmap, sdHeatmap];
   }, [
     data,
+    stdData,
     lons,
     lats,
     colorscale,
@@ -132,23 +145,14 @@ const MapDisplay = ({
   // Layout
   const layout = useMemo(() => {
     const baseLayout = {
-      margin: { l: 10, r: 0, t: 60, b: 10 },
+      grid: { rows: 2, columns: 1, pattern: 'independent' },
+      margin: { l: 50, r: 50, t: 60, b: 50 },
       paper_bgcolor: 'rgba(18, 18, 18, 0.6)',
       plot_bgcolor: 'rgba(18, 18, 18, 0.6)',
-      autosize: true,
-      uirevision: uiRevisionKey,
-      dragmode: 'zoom',
-      xaxis: {
-        showgrid: false,
-        zeroline: false,
-        showticklabels: false,
-      },
-      yaxis: {
-        showgrid: false,
-        zeroline: false,
-        showticklabels: false,
-        autorange: 'reversed',
-      },
+      xaxis: { showgrid: false, zeroline: false, showticklabels: false },
+      yaxis: { showgrid: false, zeroline: false, showticklabels: false, autorange: 'reversed' },
+      xaxis2: { showgrid: false, zeroline: false, showticklabels: false },
+      yaxis2: { showgrid: false, zeroline: false, showticklabels: false, autorange: 'reversed' },
     };
 
     if (zoomedArea?.x && zoomedArea?.y) {
