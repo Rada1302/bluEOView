@@ -111,9 +111,9 @@ const MapDisplay = ({
         tickvals,
         ticktext,
         ticks: 'outside',
-        x: 1.02,
-        y: 0.8,
-        len: 0.38,
+        x: 0.46,
+        y: 0.5,
+        len: 0.95,
         tickfont: { color: 'white' },
       },
       hovertemplate: ` Lon: %{x}<br> Lat: %{y}<br> Mean: %{z}<b style="color:red">%{customdata[1]}</b><extra></extra>`,
@@ -160,8 +160,8 @@ const MapDisplay = ({
         ticktext: ['0.00', '0.25', '0.5', '1.0'],
         ticks: 'outside',
         x: 1.02,
-        y: 0.21,
-        len: 0.38,
+        y: 0.5,
+        len: 0.95,
         tickfont: { color: 'white' },
       },
       hovertemplate:
@@ -188,7 +188,7 @@ const MapDisplay = ({
   // Layout
   const layout = useMemo(() => {
     const base = {
-      grid: { rows: 2, columns: 1, pattern: 'independent' },
+      grid: { rows: 1, columns: 2, pattern: 'independent' },
       dragmode: 'zoom',
       margin: { l: 50, r: 120, t: 90, b: 70 },
       paper_bgcolor: 'rgba(18,18,18,0.6)',
@@ -196,7 +196,7 @@ const MapDisplay = ({
       annotations: [
         {
           text: 'Mean',
-          x: 0.55,
+          x: 0.2,
           y: 1.05,
           xref: 'paper',
           yref: 'paper',
@@ -205,8 +205,8 @@ const MapDisplay = ({
         },
         {
           text: 'Standard Deviation',
-          x: 0.55,
-          y: 0.45,
+          x: 0.82,
+          y: 1.05,
           xref: 'paper',
           yref: 'paper',
           showarrow: false,
