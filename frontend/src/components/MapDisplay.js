@@ -196,7 +196,7 @@ const MapDisplay = ({
       annotations: [
         {
           text: 'Mean',
-          x: 0.5,
+          x: 0.55,
           y: 1.05,
           xref: 'paper',
           yref: 'paper',
@@ -205,7 +205,7 @@ const MapDisplay = ({
         },
         {
           text: 'Standard Deviation',
-          x: 0.5,
+          x: 0.55,
           y: 0.45,
           xref: 'paper',
           yref: 'paper',
