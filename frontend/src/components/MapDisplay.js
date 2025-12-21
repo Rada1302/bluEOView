@@ -80,19 +80,25 @@ const MapDisplay = ({
 
   // Plot data
   const plotData = useMemo(() => {
-    const flippedMean = data.slice().reverse();
+    const mean = data.slice();
     const SD = stdData.slice();
 
     const meanHeatmap = {
       type: 'heatmap',
-      z: flippedMean,
+      z: mean,
       x: lons,
       y: lats,
       colorscale,
-      zsmooth: false,
       zmin: minValue,
       zmax: maxValue,
-      colorbar: { title: 'Mean', tickcolor: 'white', tickfont: { color: 'white' } },
+      colorbar: {
+        title: 'Mean',
+        x: 1.02,
+        y: 0.75,
+        len: 0.4,
+        tickcolor: 'white',
+        tickfont: { color: 'white' },
+      },
       hovertemplate: `Lon: %{x}<br>Lat: %{y}<br>Mean: %{z}<extra></extra>`,
       xaxis: 'x',
       yaxis: 'y',
@@ -104,8 +110,14 @@ const MapDisplay = ({
       x: lons,
       y: lats,
       colorscale,
-      zsmooth: false,
-      colorbar: { title: 'Std Dev', tickcolor: 'white', tickfont: { color: 'white' } },
+      colorbar: {
+        title: 'Std Dev',
+        x: 1.02,
+        y: 0.25,
+        len: 0.4,
+        tickcolor: 'white',
+        tickfont: { color: 'white' },
+      },
       hovertemplate: `Lon: %{x}<br>Lat: %{y}<br>Std Dev: %{z}<extra></extra>`,
       xaxis: 'x2',
       yaxis: 'y2',
@@ -143,30 +155,38 @@ const MapDisplay = ({
   ]);
 
   // Layout
-  const layout = useMemo(() => {
-    const baseLayout = {
-      grid: { rows: 2, columns: 1, pattern: 'independent' },
-      margin: { l: 50, r: 50, t: 60, b: 50 },
-      paper_bgcolor: 'rgba(18, 18, 18, 0.6)',
-      plot_bgcolor: 'rgba(18, 18, 18, 0.6)',
-      xaxis: { showgrid: false, zeroline: false, showticklabels: false },
-      yaxis: { showgrid: false, zeroline: false, showticklabels: false, autorange: 'reversed' },
-      xaxis2: { showgrid: false, zeroline: false, showticklabels: false },
-      yaxis2: { showgrid: false, zeroline: false, showticklabels: false, autorange: 'reversed' },
-    };
+  const layout = useMemo(() => ({
+    grid: { rows: 2, columns: 1, pattern: 'independent' },
+    margin: { l: 50, r: 80, t: 80, b: 50 },
+    paper_bgcolor: 'rgba(18, 18, 18, 0.6)',
+    plot_bgcolor: 'rgba(18, 18, 18, 0.6)',
 
-    if (zoomedArea?.x && zoomedArea?.y) {
-      baseLayout.xaxis.range = zoomedArea.x;
-      baseLayout.yaxis.range = zoomedArea.y;
-      baseLayout.xaxis.autorange = false;
-      baseLayout.yaxis.autorange = false;
-    } else {
-      baseLayout.xaxis.autorange = true;
-      baseLayout.yaxis.autorange = true;
-    }
+    annotations: [
+      {
+        text: 'Mean',
+        x: 0.5,
+        y: 1.05,
+        xref: 'paper',
+        yref: 'paper',
+        showarrow: false,
+        font: { color: 'white', size: 16 },
+      },
+      {
+        text: 'Standard Deviation',
+        x: 0.5,
+        y: 0.45,
+        xref: 'paper',
+        yref: 'paper',
+        showarrow: false,
+        font: { color: 'white', size: 16 },
+      },
+    ],
 
-    return baseLayout;
-  }, [uiRevisionKey, zoomedArea]);
+    xaxis: { showgrid: false, showticklabels: false },
+    yaxis: { showgrid: false, showticklabels: false, autorange: 'reversed' },
+    xaxis2: { showgrid: false, showticklabels: false },
+    yaxis2: { showgrid: false, showticklabels: false, autorange: 'reversed' },
+  }), [uiRevisionKey, zoomedArea]);
 
   // Handle zooming
   const parseRelayoutRanges = (eventData) => {
