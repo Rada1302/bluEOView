@@ -24,6 +24,7 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
     : null;
 
   const colorscale = useMemo(() => generateColorStops(colors), []);
+  const memoizedPointsData = useMemo(() => pointsData, [pointsData]);
 
   // Handle resizing
   useEffect(() => {
@@ -115,10 +116,6 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
     return getLegendFromColorscale(colorscale, minValue, maxValue);
   }, [minValue, maxValue, colorscale]);
 
-  const handlePointClick = (lng, lat) => {
-    if (onPointClick) onPointClick(lng, lat);
-  };
-
   return (
     <div
       ref={containerRef}
@@ -165,10 +162,13 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
             globeImageUrl="//unpkg.com/three-globe/example/img/earth-water.png"
             showAtmosphere={false}
             backgroundColor="rgba(18, 18, 18, 0.6)"
-            pointsData={pointsData}
+            pointsData={memoizedPointsData}
             pointAltitude="size"
             pointColor="color"
-            pointRadius={0.9}
+            pointRadius={1.4}
+            pointsMerge={true}
+            animateIn={true}
+            pointTransitionDuration={0}
           />
         </div>
 
