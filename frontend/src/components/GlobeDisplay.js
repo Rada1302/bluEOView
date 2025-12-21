@@ -24,20 +24,7 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
     : null;
 
   const colorscale = useMemo(() => generateColorStops(colors), []);
-
-  const createHtmlElement = () => {
-    const el = document.createElement('div');
-    el.style.color = 'red';
-    el.style.fontSize = '24px';
-    el.style.pointerEvents = 'none';
-    el.style.userSelect = 'none';
-    el.style.transform = 'translate(-50%, -100%)';
-    el.style.whiteSpace = 'nowrap';
-    el.setAttribute('aria-label', 'Selected Point Pin');
-    el.setAttribute('title', 'Selected Point');
-    el.textContent = '📍';
-    return el;
-  };
+  const memoizedPointsData = useMemo(() => pointsData, [pointsData]);
 
   // Handle resizing
   useEffect(() => {
@@ -120,6 +107,7 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
       controls.minDistance = 250;
       controls.maxDistance = 400;
       controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.6;
     }
   }, []);
 
@@ -127,10 +115,6 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
     if (minValue == null || maxValue == null) return { colors: [], labels: [] };
     return getLegendFromColorscale(colorscale, minValue, maxValue);
   }, [minValue, maxValue, colorscale]);
-
-  const handlePointClick = (lng, lat) => {
-    if (onPointClick) onPointClick(lng, lat);
-  };
 
   return (
     <div
@@ -178,13 +162,13 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
             globeImageUrl="//unpkg.com/three-globe/example/img/earth-water.png"
             showAtmosphere={false}
             backgroundColor="rgba(18, 18, 18, 0.6)"
-            pointsData={pointsData}
+            pointsData={memoizedPointsData}
             pointAltitude="size"
             pointColor="color"
-            pointRadius={0.9}
-            onPointClick={(pt) => handlePointClick(pt.lng, pt.lat)}
-            htmlElementsData={normalizedSelectedPoint ? [normalizedSelectedPoint] : []}
-            htmlElement={createHtmlElement}
+            pointRadius={1.4}
+            pointsMerge={true}
+            animateIn={true}
+            pointTransitionDuration={0}
           />
         </div>
 

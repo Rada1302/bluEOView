@@ -43,6 +43,15 @@ export const tooltips = [
     }
 ];
 
+export const STD_THRESHOLD = 0.5;
+
+export const stdColorscale = [
+    [0.0, '#2ecc71'],
+    [STD_THRESHOLD, '#f1c40f'],
+    [STD_THRESHOLD, '#e74c3c'],
+    [1.0, '#e74c3c'],
+];
+
 // Color palette
 export const colors = [
     '#440154',
@@ -61,7 +70,6 @@ export const containerStyle = {
     width: '100%',
     height: '100%',
     position: 'relative',
-    backgroundColor: 'rgba(18, 18, 18, 0.6)',
 };
 
 export const plotWrapperStyle = {
@@ -148,7 +156,7 @@ export const mapGlobeTitleStyle = {
     width: '90%',
     color: 'white',
     height: 60,
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: 'normal',
     textAlign: 'center',
     pointerEvents: 'none',
