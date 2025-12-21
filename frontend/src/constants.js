@@ -70,7 +70,6 @@ export const containerStyle = {
     width: '100%',
     height: '100%',
     position: 'relative',
-    backgroundColor: 'rgba(18, 18, 18, 0.6)',
 };
 
 export const plotWrapperStyle = {

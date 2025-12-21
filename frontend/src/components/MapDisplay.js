@@ -16,7 +16,6 @@ import {
 const MapDisplay = ({
   month,
   feature,
-  onPointClick,
   onZoomedAreaChange,
   zoomedArea,
   fullTitle,
@@ -191,7 +190,7 @@ const MapDisplay = ({
       grid: { rows: 1, columns: 2, pattern: 'independent' },
       dragmode: 'zoom',
       margin: { l: 50, r: 120, t: 90, b: 70 },
-      paper_bgcolor: 'rgba(18,18,18,0.6)',
+      paper_bgcolor: 'transparent',
       plot_bgcolor: 'rgba(18,18,18,0.6)',
       annotations: [
         {
@@ -267,13 +266,12 @@ const MapDisplay = ({
     [onZoomedAreaChange]
   );
 
-  const handleClick = useCallback(
-    evt => {
-      if (!evt.points?.length) return;
-      onPointClick?.(evt.points[0].x, evt.points[0].y);
-    },
-    [onPointClick]
-  );
+  const handleDoubleClick = useCallback(() => {
+    // Only reset zoom if currently zoomed in
+    if (zoomedArea) {
+      onZoomedAreaChange?.(null);
+    }
+  }, [zoomedArea, onZoomedAreaChange]);
 
   // Rendering
   return (
@@ -287,12 +285,13 @@ const MapDisplay = ({
           useResizeHandler
           style={{ width: '100%', height: '100%' }}
           onRelayout={handleRelayout}
-          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
           config={{
             responsive: true,
-            scrollZoom: true,
+            scrollZoom: false,
             displayModeBar: false,
             displaylogo: false,
+            doubleClick: false,
           }}
         />
       </div>
