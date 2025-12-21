@@ -21,7 +21,6 @@ const DataPanel = ({
     debouncedUpdateMonth,
     setSelectedPoint,
     setArea,
-    selectedPoint,
     selectedArea,
     lockMonth,
     onMonthChange,
@@ -149,7 +148,6 @@ const DataPanel = ({
                         month={panel.month}
                         feature={panel.feature}
                         onPointClick={(x, y) => setSelectedPoint({ x, y })}
-                        selectedPoint={selectedPoint}
                         selectedArea={selectedArea}
                         onZoomedAreaChange={(area) => {
                             setArea(area);
@@ -164,7 +162,6 @@ const DataPanel = ({
                         month={panel.month}
                         feature={panel.feature}
                         onPointClick={(x, y) => setSelectedPoint({ x, y })}
-                        selectedPoint={selectedPoint}
                         fullTitle={fullTitle}
                     />
                 )}

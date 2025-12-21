@@ -25,20 +25,6 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
 
   const colorscale = useMemo(() => generateColorStops(colors), []);
 
-  const createHtmlElement = () => {
-    const el = document.createElement('div');
-    el.style.color = 'red';
-    el.style.fontSize = '24px';
-    el.style.pointerEvents = 'none';
-    el.style.userSelect = 'none';
-    el.style.transform = 'translate(-50%, -100%)';
-    el.style.whiteSpace = 'nowrap';
-    el.setAttribute('aria-label', 'Selected Point Pin');
-    el.setAttribute('title', 'Selected Point');
-    el.textContent = '📍';
-    return el;
-  };
-
   // Handle resizing
   useEffect(() => {
     const updateDimensions = () => {
@@ -183,9 +169,6 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
             pointAltitude="size"
             pointColor="color"
             pointRadius={0.9}
-            onPointClick={(pt) => handlePointClick(pt.lng, pt.lat)}
-            htmlElementsData={normalizedSelectedPoint ? [normalizedSelectedPoint] : []}
-            htmlElement={createHtmlElement}
           />
         </div>
 

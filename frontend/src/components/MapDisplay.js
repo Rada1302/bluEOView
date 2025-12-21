@@ -3,67 +3,58 @@ import Plot from 'react-plotly.js';
 import {
   colors,
   mapGlobeTitleStyle,
-  featureNames,
   containerStyle,
   plotWrapperStyle,
+  STD_THRESHOLD,
+  stdColorscale
 } from '../constants';
-import { generateColorStops, generateColorbarTicks } from '../utils';
+import {
+  generateColorStops,
+  generateColorbarTicks,
+} from '../utils';
 
 const MapDisplay = ({
   month,
   feature,
   onPointClick,
-  selectedPoint,
-  selectedArea,
   onZoomedAreaChange,
   zoomedArea,
   fullTitle,
 }) => {
   const [lats, setLats] = useState([]);
   const [lons, setLons] = useState([]);
-  const [data, setData] = useState([]);
+  const [meanData, setMeanData] = useState([]);
+  const [stdData, setStdData] = useState([]);
   const [minValue, setMinValue] = useState(null);
   const [maxValue, setMaxValue] = useState(null);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [colorscale, setColorscale] = useState(generateColorStops(colors));
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [stdData, setStdData] = useState([]);
 
-  const uiRevisionKey = useMemo(() => `${month}-${feature}`, [month, feature]);
+  const colorscale = useMemo(() => generateColorStops(colors), []);
 
-  // Reset zoom when dataset changes
-  useEffect(() => {
-    setIsZoomed(false);
-  }, [uiRevisionKey]);
-
-  // Fetch diversity map data from backend
+  // Fetch data
   useEffect(() => {
     const controller = new AbortController();
-    const signal = controller.signal;
 
     const fetchData = async () => {
-      setLoading(true);
-      setError(null);
       try {
-        const url = `/api/diversity-map?feature=${feature}&timeIndex=${month}`;
-        const response = await fetch(url, { signal });
-        if (!response.ok) throw new Error('Network response was not ok');
-        const json = await response.json();
+        const res = await fetch(
+          `/api/diversity-map?feature=${feature}&timeIndex=${month}`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) throw new Error('Fetch failed');
 
-        setLats(json.lats || []);
-        setLons(json.lons || []);
-        setData(json.mean || []);
-        setStdData(json.sd || []);
+        const json = await res.json();
+        setLats(json.lats ?? []);
+        setLons(json.lons ?? []);
+        setMeanData(json.mean ?? []);
+        setStdData(json.sd ?? []);
         setMinValue(json.minValue ?? null);
         setMaxValue(json.maxValue ?? null);
       } catch (err) {
         if (err.name !== 'AbortError') {
-          console.error('Error fetching map data:', err);
+          console.error(err);
           setError('Failed to load data');
         }
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -71,175 +62,224 @@ const MapDisplay = ({
     return () => controller.abort();
   }, [month, feature]);
 
-  // Colorbar ticks
+  // Colorbar ticks (mean)
   const { tickvals, ticktext } = useMemo(() => {
-    if (minValue == null || maxValue == null || !colorscale.length)
+    if (minValue == null || maxValue == null) {
       return { tickvals: [], ticktext: [] };
-    return generateColorbarTicks(minValue, maxValue, colorscale.length / 2);
+    }
+    const numBins = colorscale.length / 2;
+    return generateColorbarTicks(minValue, maxValue, numBins);
   }, [minValue, maxValue, colorscale]);
+
+  // Uncertainty mask
+  const uncertaintyMask = useMemo(() => {
+    return stdData.map(row =>
+      row.map(v => (v > STD_THRESHOLD ? 1 : 0))
+    );
+  }, [stdData]);
+
+  const hoverWarnings = useMemo(() => {
+    return stdData.map(row =>
+      row.map(v =>
+        v > STD_THRESHOLD
+          ? '<br> High uncertainty (SD > 0.5)'
+          : ''
+      )
+    );
+  }, [stdData]);
+
+  const hasHighSD = useMemo(() => {
+    return stdData.some(row => row.some(v => v > STD_THRESHOLD));
+  }, [stdData]);
 
   // Plot data
   const plotData = useMemo(() => {
-    const mean = data.slice();
-    const SD = stdData.slice();
-
     const meanHeatmap = {
       type: 'heatmap',
-      z: mean,
+      z: meanData,
       x: lons,
       y: lats,
+      customdata: stdData.map((row, i) =>
+        row.map((v, j) => [v, hoverWarnings[i][j]])
+      ),
       colorscale,
       zmin: minValue,
       zmax: maxValue,
+      xgap: 0,
+      ygap: 0,
       colorbar: {
-        title: 'Mean',
+        tickvals,
+        ticktext,
+        ticks: 'outside',
         x: 1.02,
-        y: 0.75,
-        len: 0.4,
-        tickcolor: 'white',
+        y: 0.8,
+        len: 0.38,
         tickfont: { color: 'white' },
       },
-      hovertemplate: `Lon: %{x}<br>Lat: %{y}<br>Mean: %{z}<extra></extra>`,
+      hovertemplate: ` Lon: %{x}<br> Lat: %{y}<br> Mean: %{z}<b style="color:red">%{customdata[1]}</b><extra></extra>`,
       xaxis: 'x',
       yaxis: 'y',
     };
 
-    const sdHeatmap = {
+    const traces = [meanHeatmap];
+
+    if (hasHighSD) {
+      const uncertaintyOverlay = {
+        type: 'heatmap',
+        z: uncertaintyMask,
+        x: lons,
+        y: lats,
+        colorscale: [
+          [0, 'rgba(0,0,0,0)'],
+          [1, '#ffffff'],
+        ],
+        zsmooth: false,
+        showscale: false,
+        xgap: 0,
+        ygap: 0,
+        hoverinfo: 'skip',
+        xaxis: 'x',
+        yaxis: 'y',
+        autocolorscale: false,
+      };
+      traces.push(uncertaintyOverlay);
+    }
+
+    const stdHeatmap = {
       type: 'heatmap',
-      z: SD,
+      z: stdData,
       x: lons,
       y: lats,
-      colorscale,
+      colorscale: stdColorscale,
+      zmin: 0,
+      zmax: 1.0,
+      xgap: 0,
+      ygap: 0,
       colorbar: {
-        title: 'Std Dev',
+        tickvals: [0, 0.25, 0.5, 1.0],
+        ticktext: ['0.00', '0.25', '0.5', '1.0'],
+        ticks: 'outside',
         x: 1.02,
-        y: 0.25,
-        len: 0.4,
-        tickcolor: 'white',
+        y: 0.21,
+        len: 0.38,
         tickfont: { color: 'white' },
       },
-      hovertemplate: `Lon: %{x}<br>Lat: %{y}<br>Std Dev: %{z}<extra></extra>`,
+      hovertemplate:
+        'Lon: %{x}<br>Lat: %{y}<br>Std Dev: %{z}<extra></extra>',
       xaxis: 'x2',
       yaxis: 'y2',
     };
+    traces.push(stdHeatmap);
 
-    if (selectedPoint) {
-      return [
-        meanHeatmap,
-        sdHeatmap,
-        {
-          type: 'scatter',
-          mode: 'text',
-          x: [selectedPoint.x],
-          y: [selectedPoint.y],
-          text: ['📍'],
-          textposition: 'middle center',
-          textfont: { size: 18 },
-          hoverinfo: 'skip',
-        },
-      ];
-    }
-    return [meanHeatmap, sdHeatmap];
+    return traces;
   }, [
-    data,
+    meanData,
     stdData,
-    lons,
+    uncertaintyMask,
     lats,
+    lons,
     colorscale,
     minValue,
     maxValue,
     tickvals,
     ticktext,
-    selectedPoint,
-    feature,
   ]);
 
   // Layout
-  const layout = useMemo(() => ({
-    grid: { rows: 2, columns: 1, pattern: 'independent' },
-    margin: { l: 50, r: 80, t: 80, b: 50 },
-    paper_bgcolor: 'rgba(18, 18, 18, 0.6)',
-    plot_bgcolor: 'rgba(18, 18, 18, 0.6)',
+  const layout = useMemo(() => {
+    const base = {
+      grid: { rows: 2, columns: 1, pattern: 'independent' },
+      dragmode: 'zoom',
+      margin: { l: 50, r: 120, t: 90, b: 70 },
+      paper_bgcolor: 'rgba(18,18,18,0.6)',
+      plot_bgcolor: 'rgba(18,18,18,0.6)',
+      annotations: [
+        {
+          text: 'Mean',
+          x: 0.5,
+          y: 1.05,
+          xref: 'paper',
+          yref: 'paper',
+          showarrow: false,
+          font: { size: 16, color: 'white' },
+        },
+        {
+          text: 'Standard Deviation',
+          x: 0.5,
+          y: 0.45,
+          xref: 'paper',
+          yref: 'paper',
+          showarrow: false,
+          font: { size: 16, color: 'white' },
+        },
+      ],
+    };
 
-    annotations: [
-      {
-        text: 'Mean',
-        x: 0.5,
-        y: 1.05,
-        xref: 'paper',
-        yref: 'paper',
-        showarrow: false,
-        font: { color: 'white', size: 16 },
-      },
-      {
-        text: 'Standard Deviation',
-        x: 0.5,
-        y: 0.45,
-        xref: 'paper',
-        yref: 'paper',
-        showarrow: false,
-        font: { color: 'white', size: 16 },
-      },
-    ],
+    ['xaxis', 'xaxis2'].forEach(ax => {
+      base[ax] = {
+        showgrid: false,
+        zeroline: false,
+        showline: false,
+        showticklabels: false,
+      };
+    });
 
-    xaxis: { showgrid: false, showticklabels: false },
-    yaxis: { showgrid: false, showticklabels: false, autorange: 'reversed' },
-    xaxis2: { showgrid: false, showticklabels: false },
-    yaxis2: { showgrid: false, showticklabels: false, autorange: 'reversed' },
-  }), [uiRevisionKey, zoomedArea]);
+    ['yaxis', 'yaxis2'].forEach(ax => {
+      base[ax] = {
+        showgrid: false,
+        zeroline: false,
+        showline: false,
+        showticklabels: false,
+        autorange: 'reversed',
+      };
+    });
 
-  // Handle zooming
-  const parseRelayoutRanges = (eventData) => {
-    const xr = eventData['xaxis.range'] || [
-      eventData['xaxis.range[0]'],
-      eventData['xaxis.range[1]'],
-    ];
-    const yr = eventData['yaxis.range'] || [
-      eventData['yaxis.range[0]'],
-      eventData['yaxis.range[1]'],
-    ];
-    if (xr?.[0] != null && xr?.[1] != null && yr?.[0] != null && yr?.[1] != null) {
-      return { x: xr, y: yr };
-    }
-    return null;
-  };
-
-  const handleRelayout = (eventData) => {
-    if (eventData['xaxis.autorange'] || eventData['yaxis.autorange']) {
-      setIsZoomed(false);
-      onZoomedAreaChange?.(null);
-      return;
-    }
-
-    const ranges = parseRelayoutRanges(eventData);
-    if (ranges) {
-      setIsZoomed(true);
-      onZoomedAreaChange?.(prev => {
-        if (JSON.stringify(prev) !== JSON.stringify(ranges)) {
-          return ranges;
-        }
-        return prev;
+    if (zoomedArea?.x && zoomedArea?.y) {
+      ['xaxis', 'xaxis2'].forEach(ax => {
+        base[ax].range = zoomedArea.x;
+        base[ax].autorange = false;
+      });
+      ['yaxis', 'yaxis2'].forEach(ax => {
+        base[ax].range = zoomedArea.y;
+        base[ax].autorange = false;
       });
     }
-  };
 
-  // Handle point click
-  const handlePointClick = useCallback(
-    (evt) => {
+    return base;
+  }, [zoomedArea]);
+
+  // Events
+  const handleRelayout = useCallback(
+    evt => {
+      const xr =
+        evt['xaxis.range'] ||
+        [evt['xaxis.range[0]'], evt['xaxis.range[1]']];
+      const yr =
+        evt['yaxis.range'] ||
+        [evt['yaxis.range[0]'], evt['yaxis.range[1]']];
+
+      if (xr?.[0] != null && yr?.[0] != null) {
+        onZoomedAreaChange?.({ x: xr, y: yr });
+      } else if (evt['xaxis.autorange']) {
+        onZoomedAreaChange?.(null);
+      }
+    },
+    [onZoomedAreaChange]
+  );
+
+  const handleClick = useCallback(
+    evt => {
       if (!evt.points?.length) return;
-      const { x, y } = evt.points[0];
-      onPointClick?.(x, y);
+      onPointClick?.(evt.points[0].x, evt.points[0].y);
     },
     [onPointClick]
   );
 
+  // Rendering
   return (
     <div style={containerStyle}>
       <div style={mapGlobeTitleStyle}>{fullTitle}</div>
       {error && <div style={{ color: 'red' }}>{error}</div>}
-      {!loading && !error && data.length === 0 && (
-        <div style={{ color: 'gray' }}>No data available for this selection</div>
-      )}
       <div style={plotWrapperStyle}>
         <Plot
           data={plotData}
@@ -247,12 +287,12 @@ const MapDisplay = ({
           useResizeHandler
           style={{ width: '100%', height: '100%' }}
           onRelayout={handleRelayout}
-          onClick={handlePointClick}
+          onClick={handleClick}
           config={{
-            displayModeBar: false,
             responsive: true,
+            scrollZoom: true,
+            displayModeBar: false,
             displaylogo: false,
-            showTips: false,
           }}
         />
       </div>
