@@ -99,7 +99,7 @@ const MapDisplay = ({
       x: lons,
       y: lats,
       customdata: stdData.map((row, i) =>
-        row.map((v, j) => [v, hoverWarnings[i][j]])
+        row.map((v, j) => [v === null ? "Unknown" : v.toFixed(3), hoverWarnings[i][j]])
       ),
       colorscale,
       zmin: minValue,
@@ -115,7 +115,7 @@ const MapDisplay = ({
         len: 0.95,
         tickfont: { color: 'white' },
       },
-      hovertemplate: ` Lon: %{x}<br> Lat: %{y}<br> Mean: %{z}<b style="color:red">%{customdata[1]}</b><extra></extra>`,
+      hovertemplate: ` Lon: %{x}<br> Lat: %{y}<br> Mean: %{customdata[0]}<b style="color:red">%{customdata[1]}</b><extra></extra>`,
       xaxis: 'x',
       yaxis: 'y',
     };
@@ -149,6 +149,9 @@ const MapDisplay = ({
       z: stdData,
       x: lons,
       y: lats,
+      customdata: stdData.map(row =>
+        row.map(v => (v === null ? 'Unknown' : v.toFixed(2)))
+      ),
       colorscale: stdColorscale,
       zmin: 0,
       zmax: 1.0,
@@ -164,7 +167,7 @@ const MapDisplay = ({
         tickfont: { color: 'white' },
       },
       hovertemplate:
-        'Lon: %{x}<br>Lat: %{y}<br>Std Dev: %{z}<extra></extra>',
+        'Lon: %{x}<br>Lat: %{y}<br>Std Dev: %{customdata}<extra></extra>',
       xaxis: 'x2',
       yaxis: 'y2',
     };
