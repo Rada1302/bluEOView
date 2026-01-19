@@ -217,24 +217,43 @@ const MapDisplay = ({
       ],
     };
 
-    ['xaxis', 'xaxis2'].forEach(ax => {
-      base[ax] = {
-        showgrid: false,
-        zeroline: false,
-        showline: false,
-        showticklabels: false,
-      };
-    });
+    base.xaxis = {
+      showgrid: false,
+      zeroline: false,
+      showline: false,
+      showticklabels: false,
+      constrain: 'domain',
+      scaleanchor: 'y',
+      scaleratio: 1,
+    };
 
-    ['yaxis', 'yaxis2'].forEach(ax => {
-      base[ax] = {
-        showgrid: false,
-        zeroline: false,
-        showline: false,
-        showticklabels: false,
-        autorange: 'reversed',
-      };
-    });
+    base.yaxis = {
+      showgrid: false,
+      zeroline: false,
+      showline: false,
+      showticklabels: false,
+      autorange: 'reversed',
+      constrain: 'domain',
+    };
+
+    base.xaxis2 = {
+      showgrid: false,
+      zeroline: false,
+      showline: false,
+      showticklabels: false,
+      constrain: 'domain',
+      scaleanchor: 'y2',
+      scaleratio: 1,
+    };
+
+    base.yaxis2 = {
+      showgrid: false,
+      zeroline: false,
+      showline: false,
+      showticklabels: false,
+      autorange: 'reversed',
+      constrain: 'domain',
+    };
 
     if (zoomedArea?.x && zoomedArea?.y) {
       ['xaxis', 'xaxis2'].forEach(ax => {
