@@ -46,10 +46,12 @@ export const tooltips = [
 export const STD_THRESHOLD = 0.5;
 
 export const stdColorscale = [
-    [0.0, '#2ecc71'],
-    [STD_THRESHOLD, '#f1c40f'],
-    [STD_THRESHOLD, '#e74c3c'],
-    [1.0, '#e74c3c'],
+    [0.0, '#121212'],
+    [0.001, '#ffffff'],
+    [0.75, '#ffffff'],
+    [0.8, '#ffe7e7'],
+    [0.85, '#ff0000'],
+    [1.0, '#ff0000'],
 ];
 
 // Color palette
