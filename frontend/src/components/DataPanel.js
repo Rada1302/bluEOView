@@ -19,13 +19,9 @@ const DataPanel = ({
     setPanel,
     debouncedMonth,
     debouncedUpdateMonth,
-    setSelectedPoint,
     setArea,
-    selectedPoint,
     selectedArea,
-    lockMonth,
     onMonthChange,
-    onLockToggle,
     sharedZoom,
     onSharedZoomChange,
     openInfoModal,
@@ -71,21 +67,9 @@ const DataPanel = ({
                         gap: 2,
                     }}
                 >
-                    {/* Month + Lock */}
+                    {/* Month */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography color="white" variant="subtitle"> {lockTitle} </Typography>
-                        <Box
-                            sx={{
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                color: 'white',
-                                '&:hover': { color: '#1976d2' },
-                            }}
-                            onClick={() => onLockToggle && onLockToggle()}
-                        >
-                            {lockMonth ? <Lock /> : <LockOpen />}
-                        </Box>
                     </Box>
 
                     {/* Map/Globe View Switch */}
@@ -137,18 +121,17 @@ const DataPanel = ({
                         if (onMonthChange) onMonthChange(v);
                     }}
                     valueLabelDisplay="auto"
+                    valueLabelFormat={(v) => monthNames[v]}
                     sx={{ color: '#1976d2' }}
                 />
             </Box>
 
             {/* Display Map or Globe */}
-            <Box sx={{ width: '100%', height: 400, position: 'relative' }}>
+            <Box sx={{ width: '100%', height: 'calc(100vh - 200px)', position: 'relative', backgroundColor: 'rgba(0, 0, 0, 0.25)' }}>
                 {panel.view === 'map' && (
                     <MapDisplay
                         month={panel.month}
                         feature={panel.feature}
-                        onPointClick={(x, y) => setSelectedPoint({ x, y })}
-                        selectedPoint={selectedPoint}
                         selectedArea={selectedArea}
                         onZoomedAreaChange={(area) => {
                             setArea(area);
@@ -162,8 +145,6 @@ const DataPanel = ({
                     <GlobeDisplay
                         month={panel.month}
                         feature={panel.feature}
-                        onPointClick={(x, y) => setSelectedPoint({ x, y })}
-                        selectedPoint={selectedPoint}
                         fullTitle={fullTitle}
                     />
                 )}

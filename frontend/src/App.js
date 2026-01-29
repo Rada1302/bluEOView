@@ -32,31 +32,21 @@ const App = () => {
   const [sharedZoom, setSharedZoom] = useState(null);
 
   // Panel states
-  const [panel1, setPanel1] = useState(() => ({ ...initialPanel }));
-  const [panel2, setPanel2] = useState(() => ({ ...initialPanel, feature: 'a_evenness', view: 'globe' }));
+  const [panel, setPanel] = useState(() => ({ ...initialPanel }));
 
-  // Locks
-  const [lockMonth, setLockMonth] = useState(true);
+  // Debounced months (keep initial in sync with initialPanel.month)
+  const [debouncedMonth, setDebouncedMonth] = useState(initialPanel.month);
 
-  // Debounced years (keep initial in sync with initialPanel.month)
-  const [debouncedMonth1, setDebouncedMonth1] = useState(initialPanel.month);
-  const [debouncedMonth2, setDebouncedMonth2] = useState(initialPanel.month);
-
-  const debouncedUpdateMonth1 = useMemo(
-    () => debounce((y) => setDebouncedMonth1(y), 500),
-    []
-  );
-  const debouncedUpdateMonth2 = useMemo(
-    () => debounce((y) => setDebouncedMonth2(y), 500),
+  const debouncedUpdateMonth = useMemo(
+    () => debounce((y) => setDebouncedMonth(y), 500),
     []
   );
 
   useEffect(() => {
     return () => {
-      debouncedUpdateMonth1.cancel();
-      debouncedUpdateMonth2.cancel();
+      debouncedUpdateMonth.cancel();
     };
-  }, [debouncedUpdateMonth1, debouncedUpdateMonth2]);
+  }, [debouncedUpdateMonth]);
 
   // Info modal helpers
   const openInfoModal = (title, key) => {
@@ -66,21 +56,8 @@ const App = () => {
   };
   const closeInfoModal = () => setInfoModalOpen(false);
 
-  const handleMonthChange = (panelSetter, otherPanelSetter, month) => {
+  const handleMonthChange = (panelSetter, month) => {
     panelSetter(prev => ({ ...prev, month }));
-    if (lockMonth) {
-      otherPanelSetter(prev => ({ ...prev, month }));
-    }
-  };
-
-  const handleMonthLockToggle = () => {
-    const newLock = !lockMonth;
-    setLockMonth(newLock);
-
-    if (newLock) {
-      // synchronize panel2 month to panel1 when enabling the lock
-      setPanel2(prev => ({ ...prev, month: panel1.month }));
-    }
   };
 
   return (
@@ -235,48 +212,26 @@ const App = () => {
           flexDirection: 'row',
           gap: 1,
           px: 1,
-          '@media (max-width: 1500px)': {
+          '@media (max-width: 1000px)': {
             flexDirection: 'column',
           },
         }}
       >
-        <Box sx={{ flex: '1 1 500px', minWidth: 500 }}>
-          {/* Left DataPanel */}
+        <Box sx={{ flexGrow: 1, minWidth: 500 }}>
+          {/* Left DataPanels */}
           <DataPanel
-            panel={panel1}
-            setPanel={setPanel1}
-            debouncedMonth={debouncedMonth1}
-            debouncedUpdateMonth={debouncedUpdateMonth1}
-            setSelectedPoint={setSelectedPoint}
+            panel={panel}
+            setPanel={setPanel}
+            debouncedMonth={debouncedMonth}
+            debouncedUpdateMonth={debouncedUpdateMonth}
             setArea={setArea}
-            selectedPoint={selectedPoint}
             selectedArea={area}
-            lockMonth={lockMonth}
-            onMonthChange={(y) => handleMonthChange(setPanel1, setPanel2, y)}
-            onLockToggle={handleMonthLockToggle}
+            onMonthChange={(y) => handleMonthChange(setPanel, y)}
             sharedZoom={sharedZoom}
             onSharedZoomChange={setSharedZoom}
             openInfoModal={openInfoModal}
           />
-        </Box>
 
-        <Box sx={{ flex: '1 1 500px', minWidth: 500 }}>
-          <DataPanel
-            panel={panel2}
-            setPanel={setPanel2}
-            debouncedMonth={debouncedMonth2}
-            debouncedUpdateMonth={debouncedUpdateMonth2}
-            setSelectedPoint={setSelectedPoint}
-            setArea={setArea}
-            selectedPoint={selectedPoint}
-            selectedArea={area}
-            lockMonth={lockMonth}
-            onMonthChange={(y) => handleMonthChange(setPanel2, setPanel1, y)}
-            onLockToggle={handleMonthLockToggle}
-            sharedZoom={sharedZoom}
-            onSharedZoomChange={setSharedZoom}
-            openInfoModal={openInfoModal}
-          />
         </Box>
       </Box>
 
