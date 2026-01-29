@@ -102,7 +102,6 @@ const MapDisplay = ({
         tickvals,
         ticktext,
         ticks: 'outside',
-        // Position colorbar in the middle gap on desktop, on the right on mobile
         x: isVertical ? 1.02 : 0.46,
         y: isVertical ? 0.78 : 0.5,
         len: isVertical ? 0.5 : 0.7,
@@ -160,10 +159,8 @@ const MapDisplay = ({
     const base = {
       grid: { rows: isVertical ? 2 : 1, columns: isVertical ? 1 : 2, pattern: 'independent' },
       dragmode: 'zoom',
-      // Reduced margins to eliminate wasted space
       margin: { l: 20, r: 80, t: 60, b: 20 },
       paper_bgcolor: 'transparent',
-      // The plot area itself is transparent so no "box" shows
       plot_bgcolor: 'transparent',
       annotations: [
         {
@@ -188,17 +185,16 @@ const MapDisplay = ({
     };
 
     const axisTemplate = {
-      showgrid: false,      // No grid lines
-      zeroline: false,      // No 0,0 lines
-      showline: false,      // No axis border lines
-      ticks: '',            // No tick marks
+      showgrid: false,
+      zeroline: false,
+      showline: false,
+      ticks: '',
       showticklabels: false,
       constrain: 'domain',
-      scaleanchor: 'y',     // Keep aspect ratio 1:1
+      scaleanchor: 'y',
       scaleratio: 1,
     };
 
-    // Axis 1: Mean
     base.xaxis = {
       ...axisTemplate,
       domain: isVertical ? [0, 1] : [0, 0.44],
@@ -209,7 +205,6 @@ const MapDisplay = ({
       autorange: 'reversed',
     };
 
-    // Axis 2: STD
     base.xaxis2 = {
       ...axisTemplate,
       domain: isVertical ? [0, 1] : [0.56, 1],
@@ -221,7 +216,6 @@ const MapDisplay = ({
       anchor: 'x2'
     };
 
-    // Apply zoom ranges if they exist
     if (zoomedArea?.x && zoomedArea?.y) {
       ['xaxis', 'xaxis2'].forEach(ax => { base[ax].range = zoomedArea.x; base[ax].autorange = false; });
       ['yaxis', 'yaxis2'].forEach(ax => { base[ax].range = zoomedArea.y; base[ax].autorange = false; });
