@@ -130,7 +130,7 @@ const MapDisplay = ({
         y: lats,
         colorscale: [
           [0, 'rgba(0,0,0,0)'],
-          [1, '#ffffff'],
+          [1, 'red'],
         ],
         zsmooth: false,
         showscale: false,
