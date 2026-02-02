@@ -43,10 +43,6 @@ This web application provides interactive visualizations of marine plankton dive
 - Uses `react-globe.gl` and `d3-scale` for the color scale.
 - Supports interaction like zooming, rotating, and clicking on points.
 
-### 5. **LinePlot Component**
-- Displays a time-series trend of selected points or regions.
-- Can handle dual Y-axes to show trends of two variables.
-- The user can choose an environmental parameter to compare with the main data.
 
 ## Installation
 
