@@ -284,12 +284,13 @@ const GlobeDisplay = ({
             display: 'flex',
             flexDirection: 'column-reverse',
             justifyContent: 'space-between',
-            marginLeft: 4
+            marginLeft: 4,
+            height: '97%'
           }}
         >
           {legendData.labels.map((lbl, i) => (
             <div key={i} style={{ color: 'white', fontSize: 12 }}>
-              {`- ${lbl}`}
+              {`${lbl}`}
             </div>
           ))}
         </div>

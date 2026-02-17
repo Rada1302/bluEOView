@@ -140,7 +140,7 @@ const MapDisplay = ({
       zmax: 0.6,
       colorbar: {
         tickvals: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
-        ticktext: ['0.0', '0.1', '0.2', '0.3', '0.4', '0.5', 'Max'],
+        ticktext: ['0.0', '0.1', '0.2', '0.3', '0.4', '0.5', '> 0.5'],
         ticks: 'outside',
         x: 1.02,
         y: isVertical ? 0.22 : 0.5,
