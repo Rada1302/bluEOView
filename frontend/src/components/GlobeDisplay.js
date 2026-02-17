@@ -382,7 +382,7 @@ const GlobeDisplay = ({
         width: '100%',
         height: '100%',
         position: 'relative',
-        backgroundColor: 'rgba(18,18,18,0.6)',
+        backgroundColor: 'transparent',
         overflow: 'hidden'
       }}
     >
