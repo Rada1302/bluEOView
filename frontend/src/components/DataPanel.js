@@ -127,7 +127,7 @@ const DataPanel = ({
             </Box>
 
             {/* Display Map or Globe */}
-            <Box sx={{ width: '100%', height: 'calc(100vh - 200px)', position: 'relative', backgroundColor: 'rgba(0, 0, 0, 0.25)' }}>
+            <Box sx={{ width: '100%', height: 'calc(100vh - 200px)', position: 'relative', backgroundColor: 'rgba(0, 0, 0, 0)' }}>
                 {panel.view === 'map' && (
                     <MapDisplay
                         month={panel.month}
