@@ -1,47 +1,120 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import Globe from 'react-globe.gl';
+
 import {
   generateColorStops,
   getInterpolatedColorFromValue,
-  getLegendFromColorscale,
+  getLegendFromColorscale
 } from '../utils';
-import { mapGlobeTitleStyle, colors } from '../constants';
 
-const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }) => {
+import {
+  colors,
+  stdColorscale,
+  STD_THRESHOLD,
+  mapGlobeTitleStyle
+} from '../constants';
+
+const GlobeDisplay = ({
+  month,
+  feature,
+  onPointClick,
+  selectedPoint,
+  fullTitle
+}) => {
+
   const containerRef = useRef(null);
-  const globeRef = useRef();
+
+  const meanGlobeRef = useRef();
+  const stdGlobeRef = useRef();
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [pointsData, setPointsData] = useState([]);
-  const [error, setError] = useState(null);
+
+  const [pointsData, setPointsData] = useState({
+    mean: [],
+    std: [],
+    uncertainty: []
+  });
+
   const [minValue, setMinValue] = useState(null);
   const [maxValue, setMaxValue] = useState(null);
+
+  const [error, setError] = useState(null);
   const [cachedData, setCachedData] = useState({});
-  const [isHovered, setIsHovered] = useState(false);
+
+  const [cameraState, setCameraState] = useState(null);
+
+  const [isVertical, setIsVertical] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 900 : false
+  );
+
+  const colorscale = useMemo(() => generateColorStops(colors), []);
 
   const normalizedSelectedPoint = selectedPoint
     ? { lat: selectedPoint.y, lng: selectedPoint.x }
     : null;
 
-  const colorscale = useMemo(() => generateColorStops(colors), []);
-  const memoizedPointsData = useMemo(() => pointsData, [pointsData]);
-
-  // Handle resizing
   useEffect(() => {
-    const updateDimensions = () => {
+    const handleResize = () => {
+      setIsVertical(window.innerWidth < 900);
+
       if (containerRef.current) {
         const { offsetWidth, offsetHeight } = containerRef.current;
         setDimensions({ width: offsetWidth, height: offsetHeight });
       }
     };
-    updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
+
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Fetch map data from backend
+  // Camera synchronization
+  const syncCamera = useCallback((sourceRef) => {
+    if (!sourceRef.current) return;
+
+    const pov = sourceRef.current.pointOfView();
+
+    setCameraState(pov);
+  }, []);
+
+  useEffect(() => {
+    if (!cameraState) return;
+
+    if (meanGlobeRef.current) {
+      meanGlobeRef.current.pointOfView(cameraState, 0);
+    }
+
+    if (stdGlobeRef.current) {
+      stdGlobeRef.current.pointOfView(cameraState, 0);
+    }
+  }, [cameraState]);
+
+  // Stop autorotate on interaction
+  const stopAutoRotate = (ref) => {
+    if (!ref.current) return;
+
+    const controls = ref.current.controls();
+    controls.autoRotate = false;
+  };
+
+  // Configure controls
+  const setupControls = (ref) => {
+    if (!ref.current) return;
+
+    const controls = ref.current.controls();
+
+    controls.minDistance = 250;
+    controls.maxDistance = 400;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.6;
+  };
+
+  // Fetch + transform data
   const fetchData = async (month, feature) => {
+
     const cacheKey = `${month}_${feature}`;
+
     if (cachedData[cacheKey]) {
       const cached = cachedData[cacheKey];
       setPointsData(cached.pointsData);
@@ -51,48 +124,110 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
     }
 
     try {
+
       const params = new URLSearchParams({
         feature,
-        timeIndex: month.toString(),
+        timeIndex: month.toString()
       });
 
-      const response = await fetch(`/api/diversity-map?${params.toString()}`);
-      if (!response.ok) throw new Error(`Server error ${response.status}`);
-      const data = await response.json();
+      const res = await fetch(`/api/diversity-map?${params.toString()}`);
 
-      const { lats, lons, mean, minValue: minVal, maxValue: maxVal } = data;
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
 
-      const transformed = [];
-      const step = 2; // Downsample for performance
+      const data = await res.json();
 
-      // Reverse points vertically (north on top)
+      const {
+        lats,
+        lons,
+        mean,
+        sd,
+        minValue: minVal,
+        maxValue: maxVal
+      } = data;
+
+      const step = 2; // performance downsample
+
+      const meanPoints = [];
+      const stdPoints = [];
+      const uncertaintyPoints = [];
+
       for (let latIdx = 0; latIdx < lats.length; latIdx += step) {
-        const lat = -lats[latIdx]; // Flip vertically
-        for (let lonIdx = 0; lonIdx < lons.length; lonIdx += step) {
-          const lon = lons[lonIdx] > 180 ? lons[lonIdx] - 360 : lons[lonIdx];
-          const value = mean[latIdx]?.[lonIdx];
-          if (value == null || isNaN(value)) continue;
 
-          transformed.push({
+        const lat = -lats[latIdx];
+
+        for (let lonIdx = 0; lonIdx < lons.length; lonIdx += step) {
+
+          const lonRaw = lons[lonIdx];
+          const lon = lonRaw > 180 ? lonRaw - 360 : lonRaw;
+
+          const meanVal = mean?.[latIdx]?.[lonIdx];
+          const sdVal = sd?.[latIdx]?.[lonIdx];
+
+          if (meanVal == null || isNaN(meanVal)) continue;
+
+          // Mean globe
+          meanPoints.push({
             lat,
             lng: lon,
-            size: value !== 0 ? 0.01 : 0,
-            color: getInterpolatedColorFromValue(value, minVal, maxVal, colorscale),
+            size: 0.01,
+            color: getInterpolatedColorFromValue(
+              meanVal,
+              minVal,
+              maxVal,
+              colorscale
+            )
           });
+
+          // Std globe
+          if (sdVal != null && !isNaN(sdVal)) {
+
+            stdPoints.push({
+              lat,
+              lng: lon,
+              size: 0.01,
+              color: getInterpolatedColorFromValue(
+                sdVal,
+                0,
+                0.6,
+                stdColorscale
+              )
+            });
+
+            // Uncertainty mask
+            if (sdVal > STD_THRESHOLD) {
+              uncertaintyPoints.push({
+                lat,
+                lng: lon,
+                size: 0.012,
+                color: 'red'
+              });
+            }
+          }
         }
       }
 
-      setCachedData((prev) => ({
+      const transformed = {
+        mean: meanPoints,
+        std: stdPoints,
+        uncertainty: uncertaintyPoints
+      };
+
+      setCachedData(prev => ({
         ...prev,
-        [cacheKey]: { pointsData: transformed, minValue: minVal, maxValue: maxVal },
+        [cacheKey]: {
+          pointsData: transformed,
+          minValue: minVal,
+          maxValue: maxVal
+        }
       }));
 
       setPointsData(transformed);
       setMinValue(minVal);
       setMaxValue(maxVal);
       setError(null);
+
     } catch (err) {
-      console.error('Error fetching map data:', err);
+      console.error(err);
       setError('Failed to load data');
     }
   };
@@ -101,21 +236,146 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
     fetchData(month, feature);
   }, [month, feature]);
 
-  useEffect(() => {
-    if (globeRef.current) {
-      const controls = globeRef.current.controls();
-      controls.minDistance = 250;
-      controls.maxDistance = 400;
-      controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.6;
-    }
-  }, []);
-
-  const legendData = useMemo(() => {
-    if (minValue == null || maxValue == null) return { colors: [], labels: [] };
+  // Legends
+  const meanLegend = useMemo(() => {
+    if (minValue == null || maxValue == null) return null;
     return getLegendFromColorscale(colorscale, minValue, maxValue);
   }, [minValue, maxValue, colorscale]);
 
+  const stdLegend = useMemo(() => {
+    return getLegendFromColorscale(stdColorscale, 0, 0.6);
+  }, []);
+
+  const renderLegend = (legendData) => {
+
+    if (!legendData) return null;
+
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: 60,
+          right: 10,
+          width: 70,
+          height: 'calc(100% - 80px)',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          pointerEvents: 'none',
+          zIndex: 10
+        }}
+      >
+        <div
+          style={{
+            flex: 2,
+            display: 'flex',
+            flexDirection: 'column-reverse',
+            height: '96%'
+          }}
+        >
+          {legendData.colors.map((c, i) => (
+            <div key={i} style={{ flex: 1, backgroundColor: c }} />
+          ))}
+        </div>
+
+        <div
+          style={{
+            flex: 3,
+            display: 'flex',
+            flexDirection: 'column-reverse',
+            justifyContent: 'space-between',
+            marginLeft: 4,
+            height: '97%'
+          }}
+        >
+          {legendData.labels.map((lbl, i) => (
+            <div key={i} style={{ color: 'white', fontSize: 12 }}>
+              {`${lbl}`}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Globe renderer
+  const renderGlobe = (ref, data, legend, title, showUncertainty = false) => {
+
+    const width = isVertical
+      ? dimensions.width
+      : dimensions.width / 2;
+
+    const height = isVertical
+      ? dimensions.height / 2
+      : dimensions.height;
+
+    return (
+      <div style={{ flex: 1, position: 'relative' }}>
+
+        <div
+          style={{
+            position: 'absolute',
+            top: 10,
+            width: '100%',
+            textAlign: 'center',
+            color: 'white',
+            fontSize: 16,
+            zIndex: 5
+          }}
+        >
+          {title}
+        </div>
+
+        <Globe
+          ref={ref}
+          width={width}
+          height={height}
+          globeImageUrl="//unpkg.com/three-globe/example/img/earth-water.png"
+          backgroundColor="rgba(0,0,0,0)"
+          showAtmosphere={false}
+
+          pointsData={data}
+          pointAltitude="size"
+          pointColor="color"
+          pointRadius={1.4}
+          pointsMerge={true}
+          pointTransitionDuration={0}
+
+          onGlobeReady={() => setupControls(ref)}
+
+          onZoom={() => {
+            stopAutoRotate(ref);
+            syncCamera(ref);
+          }}
+
+          onRotate={() => {
+            stopAutoRotate(ref);
+            syncCamera(ref);
+          }}
+        />
+
+        {showUncertainty && (
+          <Globe
+            width={width}
+            height={height}
+            globeImageUrl="//unpkg.com/three-globe/example/img/earth-water.png"
+            backgroundColor="rgba(0,0,0,0)"
+            showAtmosphere={false}
+            pointsData={pointsData.uncertainty}
+            pointAltitude="size"
+            pointColor="color"
+            pointRadius={1.6}
+            pointsMerge={true}
+            pointTransitionDuration={0}
+          />
+        )}
+
+        {renderLegend(legend)}
+      </div>
+    );
+  };
+
+  // Render
   return (
     <div
       ref={containerRef}
@@ -123,118 +383,44 @@ const GlobeDisplay = ({ month, feature, onPointClick, selectedPoint, fullTitle }
         width: '100%',
         height: '100%',
         position: 'relative',
-        backgroundColor: 'rgba(18, 18, 18, 0.6)',
-        overflow: 'hidden',
+        backgroundColor: 'transparent',
+        overflow: 'hidden'
       }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
+
+      <div style={mapGlobeTitleStyle}>{fullTitle}</div>
+
+      {error && (
+        <div style={{ color: 'red', position: 'absolute', top: 0 }}>
+          {error}
+        </div>
+      )}
+
       <div
         style={{
-          width: '100%',
-          height: '100%',
           display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: 'rgba(18, 18, 18, 0.6)',
+          flexDirection: isVertical ? 'column' : 'row',
+          width: '100%',
+          height: '100%'
         }}
       >
-        <div style={mapGlobeTitleStyle}>{fullTitle}</div>
 
-        {error && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              color: 'red',
-              zIndex: 11,
-            }}
-          >
-            {error}
-          </div>
+        {renderGlobe(
+          meanGlobeRef,
+          pointsData.mean,
+          meanLegend,
+          'Mean',
+          true
         )}
 
-        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-          <Globe
-            ref={globeRef}
-            width={dimensions.width}
-            height={dimensions.height}
-            globeImageUrl="//unpkg.com/three-globe/example/img/earth-water.png"
-            showAtmosphere={false}
-            backgroundColor="rgba(18, 18, 18, 0.6)"
-            pointsData={memoizedPointsData}
-            pointAltitude="size"
-            pointColor="color"
-            pointRadius={1.4}
-            pointsMerge={true}
-            animateIn={true}
-            pointTransitionDuration={0}
-          />
-        </div>
+        {renderGlobe(
+          stdGlobeRef,
+          pointsData.std,
+          stdLegend,
+          'Standard Deviation',
+          false
+        )}
 
-        {/* Legend */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 60,
-            right: 10,
-            width: 70,
-            height: 'calc(100% - 80px)',
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            pointerEvents: 'none',
-            zIndex: 10,
-          }}
-        >
-          {/* Color bar */}
-          <div
-            style={{
-              flex: 2,
-              display: 'flex',
-              flexDirection: 'column-reverse',
-              height: '96%',
-              borderRadius: 4,
-              background: 'none',
-            }}
-          >
-            {legendData.colors.map((color, i) => (
-              <div
-                key={i}
-                style={{
-                  flex: 1,
-                  backgroundColor: color,
-                  width: '100%',
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Labels */}
-          <div
-            style={{
-              flex: 3,
-              display: 'flex',
-              flexDirection: 'column-reverse',
-              justifyContent: 'space-between',
-              height: '100%',
-              marginLeft: 4,
-            }}
-          >
-            {legendData.labels.map((lbl, i) => (
-              <div
-                key={i}
-                style={{
-                  color: 'white',
-                  fontSize: 13,
-                  textAlign: 'left',
-                }}
-              >
-                {`- ${lbl}`}
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
