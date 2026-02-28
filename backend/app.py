@@ -11,7 +11,8 @@ file_lock = Lock()
 executor = Executor(app)
 
 # Hidden backend-only path
-DATA_FILE = "data/output_diversity.nc"
+#DATA_FILE = "data/output_diversity.nc"
+DATA_FILE = "https://data.up.ethz.ch/shared/mapmaker/output_diversity.nc"
 
 # Feature name to index mapping in NetCDF
 FEATURE_MAP = {
@@ -26,7 +27,6 @@ def add_header(response):
     """Disable caching for all responses."""
     response.cache_control.no_store = True
     return response
-
 
 #  Utility Functions
 def read_netcdf(file_path: str, feature_name: str, month_index: int):
@@ -47,7 +47,8 @@ def read_netcdf(file_path: str, feature_name: str, month_index: int):
 
     file_lock.acquire()
     try:
-        with xr.open_dataset(file_path, chunks={'time': 1}, decode_times=False) as ds:
+        with xr.open_dataset(file_path, engine="h5netcdf", decode_times=False) as ds:
+        #with xr.open_dataset(file_path, chunks={'time': 1}, decode_times=False) as ds:
             lats = ds['latitude'].values
             lons = ds['longitude'].values
 
