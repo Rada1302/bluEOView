@@ -2,19 +2,13 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import xarray as xr
 import numpy as np
-from threading import Lock
-from flask_executor import Executor
 
 app = Flask(__name__)
 CORS(app)
-file_lock = Lock()
-executor = Executor(app)
 
-# Hidden backend-only path
-#DATA_FILE = "data/output_diversity.nc"
+# Configuration
 DATA_FILE = "https://data.up.ethz.ch/shared/mapmaker/output_diversity.nc"
 
-# Feature name to index mapping in NetCDF
 FEATURE_MAP = {
     "a_shannon": 0,
     "a_richness": 1,
@@ -22,139 +16,140 @@ FEATURE_MAP = {
     "a_invsimpson": 3,
 }
 
-@app.after_request
-def add_header(response):
-    """Disable caching for all responses."""
-    response.cache_control.no_store = True
-    return response
+# Open dataset once at startup for better performance
+print("Opening NetCDF dataset...")
 
-#  Utility Functions
-def read_netcdf(file_path: str, feature_name: str, month_index: int):
-    """
-    Reads a diversity NetCDF file and extracts the map for a given feature and month.
-    month_index: 1–12 = months, 13 = annual mean.
-    """
-    if feature_name not in FEATURE_MAP:
-        raise ValueError(f"Invalid feature: {feature_name}")
-    feature_index = FEATURE_MAP[feature_name]
+ds = xr.open_dataset(
+    DATA_FILE,
+    engine="h5netcdf",
+    decode_times=False,
+    chunks={"time": 1}
+)
 
-    # Ensure 1–13 range
-    if not (1 <= month_index <= 13):
-        raise ValueError("timeIndex must be between 1 (January) and 13 (annual mean)")
+# Cache coordinates once
+LATS = ds["latitude"].values.tolist()
+LONS = ds["longitude"].values.tolist()
 
-    # Convert to zero-based index for Python/xarray access
-    time_index = month_index - 1
+# Precompute global min/max
+print("Precomputing global min/max values...")
 
-    file_lock.acquire()
-    try:
-        with xr.open_dataset(file_path, engine="h5netcdf", decode_times=False) as ds:
-        #with xr.open_dataset(file_path, chunks={'time': 1}, decode_times=False) as ds:
-            lats = ds['latitude'].values
-            lons = ds['longitude'].values
+GLOBAL_MINMAX = {}
 
-            mean_values = ds['mean_values'][feature_index, time_index, :, :].compute().values
-            sd_values = ds['sd_values'][feature_index, time_index, :, :].compute().values
+for feature_name, feature_index in FEATURE_MAP.items():
+    arr = ds["mean_values"][feature_index]
+    min_val = float(arr.min().compute())
+    max_val = float(arr.max().compute())
+    GLOBAL_MINMAX[feature_name] = (
+        round(min_val, 3),
+        round(max_val, 3),
+    )
 
-            mean_values = np.where(np.isnan(mean_values) | (mean_values == -9999), None, mean_values.round(3))
-            sd_values = np.where(np.isnan(sd_values) | (sd_values == -9999), None, sd_values.round(3))
+print("Backend ready.")
 
-            # Get min/max over all times for consistent color scaling
-            all_means = ds['mean_values'][feature_index, :, :, :].compute()
-            min_val = float(np.nanmin(all_means))
-            max_val = float(np.nanmax(all_means))
-
-            data = {
-                "feature": feature_name,
-                "lats": lats.tolist(),
-                "lons": lons.tolist(),
-                "mean": mean_values.tolist(),
-                "sd": sd_values.tolist(),
-                "minValue": round(min_val, 3),
-                "maxValue": round(max_val, 3),
-                "colorscale": "Viridis",
-            }
-    finally:
-        file_lock.release()
-    return data
+def clean_array(arr):
+    """Replace NaN and -9999 with None, round to 3 decimals."""
+    arr = arr.compute()
+    arr = np.where(
+        np.isnan(arr) | (arr == -9999),
+        None,
+        np.round(arr, 3),
+    )
+    return arr.tolist()
 
 
-def get_timeseries(file_path: str, feature_name: str, x: float, y: float):
-    """
-    Extracts a time series for a single point (lat/lon) across all 13 time steps for a given feature.
-    """
-    if feature_name not in FEATURE_MAP:
-        raise ValueError(f"Invalid feature: {feature_name}")
-    feature_index = FEATURE_MAP[feature_name]
-
-    file_lock.acquire()
-    try:
-        with xr.open_dataset(file_path, decode_times=False) as ds:
-            if x is None or y is None:
-                raise ValueError("Both x (longitude) and y (latitude) must be provided.")
-
-            mean_series = ds['mean_values'][feature_index, :, :, :].sel(latitude=y, longitude=x, method="nearest").compute()
-            sd_series = ds['sd_values'][feature_index, :, :, :].sel(latitude=y, longitude=x, method="nearest").compute()
-            
-            # The time dimension in the NetCDF already represents 1–13
-            time_vals = np.arange(1, len(ds['time'].values) + 1).tolist()
-
-            mean_series = np.where(np.isnan(mean_series) | (mean_series == -9999), None, mean_series.round(3))
-            sd_series = np.where(np.isnan(sd_series) | (sd_series == -9999), None, sd_series.round(3))
-
-            # Trend line (simple linear regression)
-            valid = np.array(mean_series, dtype=np.float64)
-            valid_mask = ~np.isnan(valid)
-            if valid_mask.sum() > 1:
-                coeffs = np.polyfit(np.arange(len(valid))[valid_mask], valid[valid_mask], 1)
-                trend_line = np.polyval(coeffs, np.arange(len(valid))).round(3).tolist()
-            else:
-                trend_line = [None] * len(valid)
-
-            data = {
-                "feature": feature_name,
-                "time": time_vals,
-                "mean": mean_series.tolist(),
-                "sd": sd_series.tolist(),
-                "trend": trend_line,
-            }
-    finally:
-        file_lock.release()
-    return data
-
-#  API Endpoints
+# API Endpoints
 @app.route("/api/diversity-map", methods=["GET"])
 def diversity_map():
     """
     GET /api/diversity-map?feature=a_shannon&timeIndex=1–13
-    1–12 = months, 13 = annual mean.
+    1–12 = months, 13 = annual mean
     """
+
     feature = request.args.get("feature", default="a_shannon", type=str)
     month_index = request.args.get("timeIndex", default=1, type=int)
 
-    future = executor.submit(read_netcdf, DATA_FILE, feature, month_index)
-    data = future.result()
+    if feature not in FEATURE_MAP:
+        return jsonify({"error": "Invalid feature"}), 400
 
-    response = jsonify(data)
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    return response
+    if not (1 <= month_index <= 13):
+        return jsonify({"error": "timeIndex must be 1–13"}), 400
+
+    feature_index = FEATURE_MAP[feature]
+    time_index = month_index - 1  # zero-based
+
+    mean_slice = ds["mean_values"][feature_index, time_index, :, :]
+    sd_slice = ds["sd_values"][feature_index, time_index, :, :]
+
+    mean_values = clean_array(mean_slice)
+    sd_values = clean_array(sd_slice)
+
+    min_val, max_val = GLOBAL_MINMAX[feature]
+
+    return jsonify({
+        "feature": feature,
+        "lats": LATS,
+        "lons": LONS,
+        "mean": mean_values,
+        "sd": sd_values,
+        "minValue": min_val,
+        "maxValue": max_val,
+        "colorscale": "Viridis",
+    })
 
 
 @app.route("/api/diversity-line", methods=["GET"])
 def diversity_line():
     """
     GET /api/diversity-line?feature=a_shannon&x=<lon>&y=<lat>
-    Returns a full 13-step (1–12 months + annual mean) time series for a location.
+    Returns full 13-step time series
     """
+
     feature = request.args.get("feature", default="a_shannon", type=str)
     x = request.args.get("x", type=float)
     y = request.args.get("y", type=float)
 
-    future = executor.submit(get_timeseries, DATA_FILE, feature, x, y)
-    data = future.result()
+    if feature not in FEATURE_MAP:
+        return jsonify({"error": "Invalid feature"}), 400
 
-    response = jsonify(data)
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    return response
+    if x is None or y is None:
+        return jsonify({"error": "Both x and y must be provided"}), 400
+
+    feature_index = FEATURE_MAP[feature]
+
+    mean_series = (
+        ds["mean_values"][feature_index]
+        .sel(latitude=y, longitude=x, method="nearest")
+    )
+
+    sd_series = (
+        ds["sd_values"][feature_index]
+        .sel(latitude=y, longitude=x, method="nearest")
+    )
+
+    mean_values = clean_array(mean_series)
+    sd_values = clean_array(sd_series)
+
+    # Time values (1–13)
+    time_vals = list(range(1, len(mean_values) + 1))
+
+    # Trend line
+    valid = np.array(mean_values, dtype=np.float64)
+    valid_mask = ~np.isnan(valid)
+
+    if valid_mask.sum() > 1:
+        coeffs = np.polyfit(np.arange(len(valid))[valid_mask], valid[valid_mask], 1)
+        trend_line = np.polyval(coeffs, np.arange(len(valid)))
+        trend_line = np.round(trend_line, 3).tolist()
+    else:
+        trend_line = [None] * len(valid)
+
+    return jsonify({
+        "feature": feature,
+        "time": time_vals,
+        "mean": mean_values,
+        "sd": sd_values,
+        "trend": trend_line,
+    })
 
 if __name__ == "__main__":
     app.run(debug=False, threaded=True)
