@@ -17,7 +17,7 @@ import {
 const GlobeDisplay = ({
   month,
   feature,
-  onPointClick,
+  netcdfUrl,
   selectedPoint,
   fullTitle
 }) => {
@@ -48,10 +48,6 @@ const GlobeDisplay = ({
   );
 
   const colorscale = useMemo(() => generateColorStops(colors), []);
-
-  const normalizedSelectedPoint = selectedPoint
-    ? { lat: selectedPoint.y, lng: selectedPoint.x }
-    : null;
 
   useEffect(() => {
     const handleResize = () => {
@@ -111,9 +107,8 @@ const GlobeDisplay = ({
   };
 
   // Fetch + transform data
-  const fetchData = async (month, feature) => {
-
-    const cacheKey = `${month}_${feature}`;
+  const fetchData = useCallback(async (month, feature, signal) => {
+    const cacheKey = `${month}_${feature}_${netcdfUrl}`;
 
     if (cachedData[cacheKey]) {
       const cached = cachedData[cacheKey];
@@ -127,10 +122,14 @@ const GlobeDisplay = ({
 
       const params = new URLSearchParams({
         feature,
-        timeIndex: month.toString()
+        timeIndex: month.toString(),
+        file: netcdfUrl
       });
 
-      const res = await fetch(`/api/diversity-map?${params.toString()}`);
+      const res = await fetch(
+        `/api/diversity-map?${params.toString()}`,
+        { signal }
+      );
 
       if (!res.ok) throw new Error(`Server error ${res.status}`);
 
@@ -227,14 +226,25 @@ const GlobeDisplay = ({
       setError(null);
 
     } catch (err) {
+      if (err.name === 'AbortError') {
+        return;
+      }
+
       console.error(err);
       setError('Failed to load data');
     }
-  };
+  });
 
   useEffect(() => {
-    fetchData(month, feature);
-  }, [month, feature]);
+    if (!netcdfUrl) return;
+
+    const controller = new AbortController();
+
+    fetchData(month, feature, controller.signal);
+
+    return () => controller.abort();
+
+  }, [month, feature, netcdfUrl, fetchData]);
 
   // Legends
   const meanLegend = useMemo(() => {
@@ -333,21 +343,17 @@ const GlobeDisplay = ({
           globeImageUrl="//unpkg.com/three-globe/example/img/earth-water.png"
           backgroundColor="rgba(0,0,0,0)"
           showAtmosphere={false}
-
           pointsData={data}
           pointAltitude="size"
           pointColor="color"
           pointRadius={1.4}
           pointsMerge={true}
           pointTransitionDuration={0}
-
           onGlobeReady={() => setupControls(ref)}
-
           onZoom={() => {
             stopAutoRotate(ref);
             syncCamera(ref);
           }}
-
           onRotate={() => {
             stopAutoRotate(ref);
             syncCamera(ref);

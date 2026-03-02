@@ -2,12 +2,13 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import xarray as xr
 import numpy as np
+from threading import Lock
 
 app = Flask(__name__)
 CORS(app)
 
 # Configuration
-DATA_FILE = "https://data.up.ethz.ch/shared/mapmaker/output_diversity.nc"
+DEFAULT_DATA_FILE = "https://data.up.ethz.ch/shared/mapmaker/output_diversity.nc"
 
 FEATURE_MAP = {
     "a_shannon": 0,
@@ -16,38 +17,58 @@ FEATURE_MAP = {
     "a_invsimpson": 3,
 }
 
-# Open dataset once at startup for better performance
-print("Opening NetCDF dataset...")
+# Dataset cache per url
+DATASETS = {}
+DATA_LOCK = Lock()
 
-ds = xr.open_dataset(
-    DATA_FILE,
-    engine="h5netcdf",
-    decode_times=False,
-    chunks={"time": 1}
-)
+def get_dataset(file_url):
+    """
+    Returns cached dataset for given URL.
+    If not cached yet, opens and caches it.
+    """
 
-# Cache coordinates once
-LATS = ds["latitude"].values.tolist()
-LONS = ds["longitude"].values.tolist()
+    with DATA_LOCK:
+        if file_url in DATASETS:
+            return DATASETS[file_url]
 
-# Precompute global min/max
-print("Precomputing global min/max values...")
+        print(f"Opening dataset: {file_url}")
 
-GLOBAL_MINMAX = {}
+        ds = xr.open_dataset(
+            file_url,
+            engine="h5netcdf",
+            decode_times=False,
+            chunks={"time": 1}
+        )
 
-for feature_name, feature_index in FEATURE_MAP.items():
-    arr = ds["mean_values"][feature_index]
-    min_val = float(arr.min().compute())
-    max_val = float(arr.max().compute())
-    GLOBAL_MINMAX[feature_name] = (
-        round(min_val, 3),
-        round(max_val, 3),
-    )
+        # Cache coordinates
+        lats = ds["latitude"].values.tolist()
+        lons = ds["longitude"].values.tolist()
 
-print("Backend ready.")
+        # Precompute min/max per feature
+        global_minmax = {}
+        for feature_name, feature_index in FEATURE_MAP.items():
+            arr = ds["mean_values"][feature_index]
+            min_val = float(arr.min().compute())
+            max_val = float(arr.max().compute())
+            global_minmax[feature_name] = (
+                round(min_val, 3),
+                round(max_val, 3),
+            )
 
+        DATASETS[file_url] = {
+            "ds": ds,
+            "lats": lats,
+            "lons": lons,
+            "minmax": global_minmax,
+        }
+
+        print(f"Dataset cached: {file_url}")
+
+        return DATASETS[file_url]
+
+
+# Utilities
 def clean_array(arr):
-    """Replace NaN and -9999 with None, round to 3 decimals."""
     arr = arr.compute()
     arr = np.where(
         np.isnan(arr) | (arr == -9999),
@@ -60,13 +81,10 @@ def clean_array(arr):
 # API Endpoints
 @app.route("/api/diversity-map", methods=["GET"])
 def diversity_map():
-    """
-    GET /api/diversity-map?feature=a_shannon&timeIndex=1–13
-    1–12 = months, 13 = annual mean
-    """
 
     feature = request.args.get("feature", default="a_shannon", type=str)
     month_index = request.args.get("timeIndex", default=1, type=int)
+    file_url = request.args.get("file", default=DEFAULT_DATA_FILE, type=str)
 
     if feature not in FEATURE_MAP:
         return jsonify({"error": "Invalid feature"}), 400
@@ -74,8 +92,11 @@ def diversity_map():
     if not (1 <= month_index <= 13):
         return jsonify({"error": "timeIndex must be 1–13"}), 400
 
+    dataset = get_dataset(file_url)
+    ds = dataset["ds"]
+
     feature_index = FEATURE_MAP[feature]
-    time_index = month_index - 1  # zero-based
+    time_index = month_index - 1
 
     mean_slice = ds["mean_values"][feature_index, time_index, :, :]
     sd_slice = ds["sd_values"][feature_index, time_index, :, :]
@@ -83,12 +104,12 @@ def diversity_map():
     mean_values = clean_array(mean_slice)
     sd_values = clean_array(sd_slice)
 
-    min_val, max_val = GLOBAL_MINMAX[feature]
+    min_val, max_val = dataset["minmax"][feature]
 
     return jsonify({
         "feature": feature,
-        "lats": LATS,
-        "lons": LONS,
+        "lats": dataset["lats"],
+        "lons": dataset["lons"],
         "mean": mean_values,
         "sd": sd_values,
         "minValue": min_val,
@@ -99,20 +120,20 @@ def diversity_map():
 
 @app.route("/api/diversity-line", methods=["GET"])
 def diversity_line():
-    """
-    GET /api/diversity-line?feature=a_shannon&x=<lon>&y=<lat>
-    Returns full 13-step time series
-    """
 
     feature = request.args.get("feature", default="a_shannon", type=str)
     x = request.args.get("x", type=float)
     y = request.args.get("y", type=float)
+    file_url = request.args.get("file", default=DEFAULT_DATA_FILE, type=str)
 
     if feature not in FEATURE_MAP:
         return jsonify({"error": "Invalid feature"}), 400
 
     if x is None or y is None:
         return jsonify({"error": "Both x and y must be provided"}), 400
+
+    dataset = get_dataset(file_url)
+    ds = dataset["ds"]
 
     feature_index = FEATURE_MAP[feature]
 
@@ -129,10 +150,8 @@ def diversity_line():
     mean_values = clean_array(mean_series)
     sd_values = clean_array(sd_series)
 
-    # Time values (1–13)
     time_vals = list(range(1, len(mean_values) + 1))
 
-    # Trend line
     valid = np.array(mean_values, dtype=np.float64)
     valid_mask = ~np.isnan(valid)
 
@@ -150,6 +169,7 @@ def diversity_line():
         "sd": sd_values,
         "trend": trend_line,
     })
+
 
 if __name__ == "__main__":
     app.run(debug=False, threaded=True)

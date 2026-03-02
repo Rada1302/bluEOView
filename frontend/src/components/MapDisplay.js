@@ -16,6 +16,7 @@ import {
 const MapDisplay = ({
   month,
   feature,
+  netcdfUrl,
   onZoomedAreaChange,
   zoomedArea,
   fullTitle,
@@ -40,11 +41,18 @@ const MapDisplay = ({
   const colorscale = useMemo(() => generateColorStops(colors), []);
 
   useEffect(() => {
+    if (!netcdfUrl) return;
     const controller = new AbortController();
     const fetchData = async () => {
       try {
+        const params = new URLSearchParams({
+          feature,
+          timeIndex: month.toString(),
+          file: netcdfUrl
+        });
+
         const res = await fetch(
-          `/api/diversity-map?feature=${feature}&timeIndex=${month}`,
+          `/api/diversity-map?${params.toString()}`,
           { signal: controller.signal }
         );
         if (!res.ok) throw new Error('Fetch failed');
@@ -64,7 +72,7 @@ const MapDisplay = ({
     };
     fetchData();
     return () => controller.abort();
-  }, [month, feature]);
+  }, [month, feature, netcdfUrl]);
 
   const { tickvals, ticktext } = useMemo(() => {
     if (minValue == null || maxValue == null) return { tickvals: [], ticktext: [] };

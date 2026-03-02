@@ -18,6 +18,7 @@ const DataPanel = ({
     panel,
     setPanel,
     debouncedMonth,
+    netcdfUrl,
     debouncedUpdateMonth,
     setArea,
     selectedArea,
@@ -132,6 +133,7 @@ const DataPanel = ({
                     <MapDisplay
                         month={panel.month}
                         feature={panel.feature}
+                        netcdfUrl={netcdfUrl}
                         selectedArea={selectedArea}
                         onZoomedAreaChange={(area) => {
                             setArea(area);
@@ -145,6 +147,7 @@ const DataPanel = ({
                     <GlobeDisplay
                         month={panel.month}
                         feature={panel.feature}
+                        netcdfUrl={netcdfUrl}
                         fullTitle={fullTitle}
                     />
                 )}

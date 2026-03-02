@@ -27,9 +27,20 @@ const App = () => {
   const [infoModalShortText, setInfoModalShortText] = useState('');
   const [infoModalTitle, setInfoModalTitle] = useState('');
 
-  const [selectedPoint, setSelectedPoint] = useState({ x: 0, y: 0 });
   const [area, setArea] = useState(null);
   const [sharedZoom, setSharedZoom] = useState(null);
+
+  // NetCDF source state
+  const DEFAULT_URLS = [
+    {
+      label: "Default (ETH Diversity Dataset)",
+      value: "https://data.up.ethz.ch/shared/mapmaker/output_diversity.nc"
+    },
+  ];
+
+  const [netcdfUrl, setNetcdfUrl] = useState(DEFAULT_URLS[0].value);
+  const [loadedUrl, setLoadedUrl] = useState(DEFAULT_URLS[0].value);
+  const [selectedDefault, setSelectedDefault] = useState(DEFAULT_URLS[0].value);
 
   // Panel states
   const [panel, setPanel] = useState(() => ({ ...initialPanel }));
@@ -197,6 +208,67 @@ const App = () => {
 
       <Divider sx={{ bgcolor: 'rgba(255,255,255,0.3)', mt: 1, mb: 2 }} />
 
+      {/* NetCDF URL Selector */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 2,
+          px: 2,
+          mb: 2,
+          flexWrap: 'wrap'
+        }}
+      >
+        <Typography sx={{ color: 'white', fontWeight: 500 }}>
+          NetCDF Source:
+        </Typography>
+
+        {/* Dropdown */}
+        <select
+          value={selectedDefault}
+          onChange={(e) => {
+            setSelectedDefault(e.target.value);
+            setNetcdfUrl(e.target.value);
+          }}
+          style={{
+            padding: '6px 10px',
+            borderRadius: 6,
+            minWidth: 250
+          }}
+        >
+          {DEFAULT_URLS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+
+        {/* Custom URL input */}
+        <input
+          type="text"
+          value={netcdfUrl}
+          onChange={(e) => setNetcdfUrl(e.target.value)}
+          placeholder="Enter custom NetCDF URL..."
+          style={{
+            padding: '6px 10px',
+            borderRadius: 6,
+            width: 400,
+            maxWidth: '80vw'
+          }}
+        />
+
+        <Button
+          variant="contained"
+          onClick={() => {
+            console.log("Using NetCDF:", netcdfUrl);
+            setLoadedUrl(netcdfUrl);
+          }}
+        >
+          Load
+        </Button>
+      </Box>
+
       {/* Info Modal */}
       <InfoModal
         open={infoModalOpen}
@@ -218,7 +290,7 @@ const App = () => {
         }}
       >
         <Box sx={{ flexGrow: 1, minWidth: 500 }}>
-          {/* Left DataPanels */}
+          {/* DataPanel */}
           <DataPanel
             panel={panel}
             setPanel={setPanel}
@@ -230,6 +302,7 @@ const App = () => {
             sharedZoom={sharedZoom}
             onSharedZoomChange={setSharedZoom}
             openInfoModal={openInfoModal}
+            netcdfUrl={loadedUrl}
           />
 
         </Box>
