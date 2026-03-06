@@ -65,22 +65,24 @@ def get_dataset(file_url):
             lats = sorted([round(float(v), 4) for v in raw_lats if np.isfinite(v) and -90 <= v <= 90])
             lons = sorted([round(float(v), 4) for v in raw_lons if np.isfinite(v) and -180 <= v <= 360])
             if not lats or not lons:
-                raise ValueError(f"No valid coords after filtering (lats={len(lats)}, lons={len(lons)}). "
-                                 f"Raw lat sample: {raw_lats[:5]}, raw lon sample: {raw_lons[:5]}")
+                raise ValueError(f"lat/lon variables contain only fill values")
             print(f"Lats: {len(lats)} from {lats[0]} to {lats[-1]}")
             print(f"Lons: {len(lons)} from {lons[0]} to {lons[-1]}")
         except Exception as e:
-            print(f"Coord extraction failed ({e}), using fallback uniform grid")
-            lats = [round(-89.5 + i, 1) for i in range(180)]
-            lons = [round(-179.5 + i, 1) for i in range(360)]
+            print(f"Coord extraction failed ({e}), inferring from dimension size")
+            n_lat = ds.sizes.get("lat", 180)
+            n_lon = ds.sizes.get("lon", 360)
+            lats = [round(-90 + (i + 0.5) * 180 / n_lat, 4) for i in range(n_lat)]
+            lons = [round(-180 + (i + 0.5) * 360 / n_lon, 4) for i in range(n_lon)]
+            print(f"Inferred grid: lats {lats[0]} to {lats[-1]}, lons {lons[0]} to {lons[-1]}")
 
-        valid_indices = []
-        valid_targets = []
-        for i, name in enumerate(raw_target_names):
-            arr = ds["mean"].isel(target=i).compute().values
-            if np.isfinite(arr).sum() > 0:
-                valid_indices.append(i)
-                valid_targets.append({"key": f"target_{i}", "label": name})
+        print("Filtering valid targets...")
+        mean_t0 = ds["mean"].isel(time=0).values  # shape: (target, lat, lon)
+        finite_counts = np.isfinite(mean_t0).reshape(mean_t0.shape[0], -1).any(axis=1)
+
+        valid_indices = [i for i, ok in enumerate(finite_counts) if ok]
+        valid_targets = [{"key": f"target_{i}", "label": raw_target_names[i]} for i in valid_indices]
+        print(f"Found {len(valid_targets)} valid targets")
 
         # Print raw SD stats for first valid target across all time steps
         if valid_indices:
