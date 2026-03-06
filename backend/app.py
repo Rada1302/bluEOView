@@ -3,16 +3,44 @@ from flask_cors import CORS
 import xarray as xr
 import numpy as np
 from threading import Lock
+import requests
+import tempfile
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-# Default dataset URL
 DEFAULT_DATA_FILE = "https://data.up.ethz.ch/shared/Blueoview_data/diversity_output.nc"
 
-# Dataset cache for performance
 DATASETS = {}
 DATA_LOCK = Lock()
+DOWNLOADED_FILES = {}
+
+
+def get_local_path(file_url):
+    if file_url in DOWNLOADED_FILES:
+        local_path = DOWNLOADED_FILES[file_url]
+        if os.path.exists(local_path):
+            return local_path
+
+    print(f"Downloading: {file_url}")
+    response = requests.get(file_url, stream=True, timeout=120)
+    response.raise_for_status()
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".nc")
+    for chunk in response.iter_content(chunk_size=8192):
+        tmp.write(chunk)
+    tmp.close()
+
+    DOWNLOADED_FILES[file_url] = tmp.name
+    print(f"Downloaded to: {tmp.name}")
+    return tmp.name
+
+
+def decode_name(name):
+    if isinstance(name, (bytes, np.bytes_)):
+        return name.decode("utf-8", errors="replace").strip()
+    return str(name).strip()
 
 
 def get_dataset(file_url):
@@ -20,144 +48,141 @@ def get_dataset(file_url):
         if file_url in DATASETS:
             return DATASETS[file_url]
 
-        print(f"Opening dataset: {file_url}")
+        local_path = get_local_path(file_url)
+        print(f"Opening dataset: {local_path}")
 
-        ds = xr.open_dataset(
-            file_url,
-            engine="h5netcdf",
-            decode_times=False,
-            mask_and_scale=True,
-            chunks={"time": 1}
-        )
+        ds = xr.open_dataset(local_path, mask_and_scale=True)
+        print(f"Data vars: {list(ds.data_vars)}")
+        print(f"Dims: {dict(ds.sizes)}")
 
-        # Extract target names
-        raw_target_names = ds["target_name"].values.tolist()
+        raw_target_names = [decode_name(n) for n in ds["target_name"].values.tolist()]
 
-        lats = ds["lat"].values.tolist()
-        lons = ds["lon"].values.tolist()
+        try:
+            ds_coords = xr.open_dataset(local_path, decode_cf=False)
+            raw_lats = np.array(ds_coords["lat"].values, dtype=float).flatten()
+            raw_lons = np.array(ds_coords["lon"].values, dtype=float).flatten()
+            ds_coords.close()
+            lats = sorted([round(float(v), 4) for v in raw_lats if np.isfinite(v) and -90 <= v <= 90])
+            lons = sorted([round(float(v), 4) for v in raw_lons if np.isfinite(v) and -180 <= v <= 360])
+            if not lats or not lons:
+                raise ValueError(f"No valid coords after filtering (lats={len(lats)}, lons={len(lons)}). "
+                                 f"Raw lat sample: {raw_lats[:5]}, raw lon sample: {raw_lons[:5]}")
+            print(f"Lats: {len(lats)} from {lats[0]} to {lats[-1]}")
+            print(f"Lons: {len(lons)} from {lons[0]} to {lons[-1]}")
+        except Exception as e:
+            print(f"Coord extraction failed ({e}), using fallback uniform grid")
+            lats = [round(-89.5 + i, 1) for i in range(180)]
+            lons = [round(-179.5 + i, 1) for i in range(360)]
 
         valid_indices = []
         valid_targets = []
-        global_minmax = {}
-
-        print("Filtering empty targets...")
-
         for i, name in enumerate(raw_target_names):
             arr = ds["mean"].isel(target=i).compute().values
-            arr = np.array(arr, dtype=float)
-            finite_vals = arr[np.isfinite(arr)]
-
-            if finite_vals.size > 0:
+            if np.isfinite(arr).sum() > 0:
                 valid_indices.append(i)
+                valid_targets.append({"key": f"target_{i}", "label": name})
 
-                # If duplicates exist, make them unique
-                if name in valid_targets:
-                    name = f"{name}_{i}"
+        # Print raw SD stats for first valid target across all time steps
+        if valid_indices:
+            raw_sd = ds["sd"].isel(target=valid_indices[0]).values
+            finite_sd = raw_sd[np.isfinite(raw_sd)]
+            if finite_sd.size > 0:
+                print(f"Raw SD (target 0, all times): min={finite_sd.min():.4g} max={finite_sd.max():.4g} "
+                      f"median={np.median(finite_sd):.4g} p95={np.percentile(finite_sd, 95):.4g}")
 
-                valid_targets.append(name)
-
-                min_val = round(float(np.min(finite_vals)), 3)
-                max_val = round(float(np.max(finite_vals)), 3)
-                global_minmax[name] = (min_val, max_val)
-
-        # Select only valid indices
         ds = ds.isel(target=valid_indices)
-
-        # Assign new unique coordinate
-        ds = ds.assign_coords(target=("target", valid_targets))
-
-        print(f"Kept {len(valid_targets)} valid targets")
+        ds = ds.assign_coords(target=("target", [t["key"] for t in valid_targets]))
+        target_map = {t["key"]: t for t in valid_targets}
 
         DATASETS[file_url] = {
             "ds": ds,
             "targets": valid_targets,
+            "target_map": target_map,
             "lats": lats,
             "lons": lons,
-            "minmax": global_minmax,
         }
-
-        print("Dataset cached")
+        print(f"Kept {len(valid_targets)} targets: {[(t['key'], t['label']) for t in valid_targets[:3]]}")
         return DATASETS[file_url]
+
+
+def slice_to_2d(slice_):
+    arr = slice_.transpose("lat", "lon").load().values
+    return [
+        [None if not np.isfinite(x) else round(float(x), 3) for x in row]
+        for row in arr
+    ]
 
 
 @app.route("/api/diversity-map", methods=["GET"])
 def diversity_map():
-    feature = request.args.get("feature", type=str)
+    feature_key = request.args.get("feature", type=str)
     month_index = request.args.get("timeIndex", default=1, type=int)
     file_url = request.args.get("file", default=DEFAULT_DATA_FILE, type=str)
 
-    dataset = get_dataset(file_url)
+    try:
+        dataset = get_dataset(file_url)
+    except Exception as e:
+        return jsonify({"error": f"Failed to load dataset: {str(e)}"}), 500
+
     ds = dataset["ds"]
-    lats = np.array(dataset["lats"])
-    lons = np.array(dataset["lons"])
+    target_map = dataset["target_map"]
 
-    if feature not in dataset["targets"]:
-        return jsonify({"error": "Invalid or empty feature"}), 400
+    if feature_key not in target_map:
+        return jsonify({"error": f"Unknown feature '{feature_key}'"}), 400
 
-    if not (1 <= month_index <= ds.sizes["time"]):
-        return jsonify({"error": "Invalid timeIndex"}), 400
+    max_time = ds.sizes["time"]
+    if not (1 <= month_index <= max_time):
+        return jsonify({"error": f"Invalid timeIndex {month_index}, valid range 1-{max_time}"}), 400
 
     time_index = month_index - 1
+    mean_slice = ds["mean"].sel(target=feature_key).isel(time=time_index).load()
+    sd_slice   = ds["sd"].sel(target=feature_key).isel(time=time_index).load()
 
-    mean_slice = ds["mean"].sel(target=feature).isel(time=time_index)
-    sd_slice = ds["sd"].sel(target=feature).isel(time=time_index)
+    sd_vals = sd_slice.values[np.isfinite(sd_slice.values)]
+    if sd_vals.size > 0:
+        print(f"SD: min={sd_vals.min():.3g} max={sd_vals.max():.3g} "
+              f"median={np.median(sd_vals):.3g} p90={np.percentile(sd_vals, 90):.3g} "
+              f"pct_over_0.5={100*(sd_vals > 0.5).mean():.1f}%")
 
-    def slice_to_2d(slice_):
-        arr = slice_.values
-        arr = np.array(arr, dtype=float)
+    finite_vals = mean_slice.values[np.isfinite(mean_slice.values)]
+    min_val = round(float(finite_vals.min()), 3) if finite_vals.size > 0 else None
+    max_val = round(float(finite_vals.max()), 3) if finite_vals.size > 0 else None
 
-        # Ensure 2D shape
-        if arr.ndim == 1:
-            if len(arr) == len(lats) * len(lons):
-                arr = arr.reshape(len(lats), len(lons))
-            elif len(arr) == len(lats):
-                arr = np.repeat(arr[:, np.newaxis], len(lons), axis=1)
-            elif len(arr) == len(lons):
-                arr = np.repeat(arr[np.newaxis, :], len(lats), axis=0)
-            else:
-                raise ValueError(f"Unexpected slice shape: {arr.shape}")
-
-        arr = np.where(np.isfinite(arr), arr, None)
-
-        arr_rounded = np.array([
-            [round(x, 3) if x is not None else None for x in row]
-            for row in arr
-        ])
-
-        return arr_rounded.tolist()
-
-    mean_values = slice_to_2d(mean_slice)
-    sd_values = slice_to_2d(sd_slice)
-
-    min_val, max_val = dataset["minmax"][feature]
+    sd_finite = sd_slice.values[np.isfinite(sd_slice.values)]
+    sd_min = round(float(sd_finite.min()), 3) if sd_finite.size > 0 else None
+    sd_max = round(float(sd_finite.max()), 3) if sd_finite.size > 0 else None
 
     return jsonify({
-        "feature": feature,
-        "lats": lats.tolist(),
-        "lons": lons.tolist(),
-        "mean": mean_values,
-        "sd": sd_values,
+        "feature":  feature_key,
+        "label":    target_map[feature_key]["label"],
+        "lats":     dataset["lats"],
+        "lons":     dataset["lons"],
+        "mean":     slice_to_2d(mean_slice),
+        "sd":       slice_to_2d(sd_slice),
         "minValue": min_val,
         "maxValue": max_val,
-        "colorscale": "Viridis",
+        "sdMin":    sd_min,
+        "sdMax":    sd_max,
     })
 
 
 @app.route("/api/diversity-features", methods=["GET"])
 def diversity_features():
     file_url = request.args.get("file", default=DEFAULT_DATA_FILE, type=str)
-    dataset = get_dataset(file_url)
 
-    features = [
+    try:
+        dataset = get_dataset(file_url)
+    except Exception as e:
+        return jsonify({"error": f"Failed to load dataset: {str(e)}"}), 500
+
+    return jsonify({"features": [
         {
-            "value": name,
-            "label": name.replace("_", " ").title(),
-            "description": f"Diversity metric: {name}"
+            "value": t["key"],
+            "label": t["label"].replace("_", " ").title(),
+            "description": f"Diversity metric: {t['label']}",
         }
-        for name in dataset["targets"]
-    ]
-
-    return jsonify({"features": features})
+        for t in dataset["targets"]
+    ]})
 
 
 if __name__ == "__main__":

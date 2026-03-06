@@ -1,10 +1,8 @@
 export const generateColorStops = (colors) => {
-    const step = 1 / colors.length;
-    return colors.flatMap((color, i) => {
-        const start = i * step;
-        const end = (i + 1) * step;
-        return [[start, color], [end, color]];
-    });
+    return colors.map((color, i) => [
+        parseFloat((i / (colors.length - 1)).toFixed(4)),
+        color
+    ]);
 };
 
 export const hexToRgb = (hex) => {
@@ -22,17 +20,22 @@ export const hexToRgb = (hex) => {
 };
 
 export const getInterpolatedColorFromValue = (value, min, max, colorStops) => {
-    if (isNaN(value) || value == null) return 'rgba(0,0,0,0)';
+    if (value == null || !isFinite(value)) return 'rgba(0,0,0,0)';
     if (min === max) return colorStops[colorStops.length - 1][1];
 
-    const norm = (value - min) / (max - min);
+    const norm = Math.max(0, Math.min(1, (value - min) / (max - min)));
 
+    // Find the two surrounding stops
     for (let i = 0; i < colorStops.length - 1; i++) {
         const [start, startColor] = colorStops[i];
         const [end, endColor] = colorStops[i + 1];
 
         if (norm >= start && norm <= end) {
-            const ratio = (norm - start) / (end - start);
+            const span = end - start;
+            // If stops are at the same position, return the end color directly
+            if (span === 0) return endColor;
+
+            const ratio = (norm - start) / span;
             const rgbStart = hexToRgb(startColor);
             const rgbEnd = hexToRgb(endColor);
 
@@ -48,14 +51,10 @@ export const getInterpolatedColorFromValue = (value, min, max, colorStops) => {
 };
 
 export const getLegendFromColorscale = (colorscale, minValue, maxValue) => {
-    const numBins = colorscale.length / 2;
+    // colorscale is now one entry per color (not doubled), so length = numBins
+    const numBins = colorscale.length;
     const { tickvals, ticktext } = generateColorbarTicks(minValue, maxValue, numBins);
-
-    const binColors = colorscale
-        .filter((_, i) => i % 2 === 0)
-        .slice(0, numBins)
-        .map(([_, color]) => color);
-
+    const binColors = colorscale.map(([_, color]) => color);
     return { colors: binColors, labels: ticktext };
 };
 
@@ -63,16 +62,15 @@ export const generateColorbarTicks = (min, max, numBins) => {
     if (min == null || max == null) return { tickvals: [], ticktext: [] };
 
     const range = max - min;
-    const step = range / numBins;
+    const step = range / (numBins - 1);
+    const precision = range >= 10 ? 0 : range >= 1 ? 2 : 3;
+
     const tickvals = [];
     const ticktext = [];
 
-    const precision = range >= 10 ? 0 :
-        range >= 1 ? 2 : 3;
-
-    for (let i = 0; i <= numBins; i++) {
+    for (let i = 0; i < numBins; i++) {
         const val = min + step * i;
-        tickvals.push(val);
+        tickvals.push(parseFloat(val.toFixed(precision)));
         ticktext.push(val.toFixed(precision));
     }
 

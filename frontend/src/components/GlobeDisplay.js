@@ -10,424 +10,212 @@ import {
 import {
   colors,
   stdColorscale,
-  STD_THRESHOLD,
   mapGlobeTitleStyle
 } from '../constants';
 
-const GlobeDisplay = ({
-  month,
-  feature,
-  netcdfUrl,
-  selectedPoint,
-  fullTitle
-}) => {
-
+const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
   const containerRef = useRef(null);
-
   const meanGlobeRef = useRef();
   const stdGlobeRef = useRef();
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-
-  const [pointsData, setPointsData] = useState({
-    mean: [],
-    std: [],
-    uncertainty: []
-  });
-
+  const [pointsData, setPointsData] = useState({ mean: [], std: [] });
   const [minValue, setMinValue] = useState(null);
   const [maxValue, setMaxValue] = useState(null);
-
+  const [sdMax, setSdMax] = useState(null);
   const [error, setError] = useState(null);
-  const [cachedData, setCachedData] = useState({});
-
-  const [cameraState, setCameraState] = useState(null);
-
+  const [isLoading, setIsLoading] = useState(false);
   const [isVertical, setIsVertical] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 900 : false
   );
 
+  const cacheRef = useRef({});
   const colorscale = useMemo(() => generateColorStops(colors), []);
 
   useEffect(() => {
     const handleResize = () => {
       setIsVertical(window.innerWidth < 900);
-
       if (containerRef.current) {
         const { offsetWidth, offsetHeight } = containerRef.current;
         setDimensions({ width: offsetWidth, height: offsetHeight });
       }
     };
-
     handleResize();
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Camera synchronization
-  const syncCamera = useCallback((sourceRef) => {
-    if (!sourceRef.current) return;
-
-    const pov = sourceRef.current.pointOfView();
-
-    setCameraState(pov);
-  }, []);
-
-  useEffect(() => {
-    if (!cameraState) return;
-
-    if (meanGlobeRef.current) {
-      meanGlobeRef.current.pointOfView(cameraState, 0);
-    }
-
-    if (stdGlobeRef.current) {
-      stdGlobeRef.current.pointOfView(cameraState, 0);
-    }
-  }, [cameraState]);
-
-  // Stop autorotate on interaction
-  const stopAutoRotate = (ref) => {
-    if (!ref.current) return;
-
-    const controls = ref.current.controls();
-    controls.autoRotate = false;
-  };
-
-  // Configure controls
-  const setupControls = (ref) => {
-    if (!ref.current) return;
-
-    const controls = ref.current.controls();
-
-    controls.minDistance = 250;
-    controls.maxDistance = 400;
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.6;
-  };
-
-  // Fetch + transform data
   const fetchData = useCallback(async (month, feature, signal) => {
-    const cacheKey = `${month}_${feature}_${netcdfUrl}`;
+    if (!feature || !netcdfUrl) return;
 
-    if (cachedData[cacheKey]) {
-      const cached = cachedData[cacheKey];
-      setPointsData(cached.pointsData);
-      setMinValue(cached.minValue);
-      setMaxValue(cached.maxValue);
+    const cacheKey = `${month}_${feature}_${netcdfUrl}`;
+    if (cacheRef.current[cacheKey]) {
+      const c = cacheRef.current[cacheKey];
+      setPointsData(c.pointsData);
+      setMinValue(c.minValue);
+      setMaxValue(c.maxValue);
+      setSdMax(c.sdMax ?? null);
       return;
     }
 
+    setIsLoading(true);
+    setError(null);
+
     try {
+      const params = new URLSearchParams({ feature, timeIndex: month.toString(), file: netcdfUrl });
+      const res = await fetch(`/api/diversity-map?${params}`, { signal });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? `Server error ${res.status}`);
 
-      const params = new URLSearchParams({
-        feature,
-        timeIndex: month.toString(),
-        file: netcdfUrl
-      });
+      const { lats, lons, mean, sd, minValue: minVal, maxValue: maxVal, sdMax } = json;
 
-      const res = await fetch(
-        `/api/diversity-map?${params.toString()}`,
-        { signal }
-      );
+      if (!lats?.length || !lons?.length || !mean?.length) throw new Error('API returned empty data');
 
-      if (!res.ok) throw new Error(`Server error ${res.status}`);
-
-      const data = await res.json();
-
-      const {
-        lats,
-        lons,
-        mean,
-        sd,
-        minValue: minVal,
-        maxValue: maxVal
-      } = data;
-
-      const step = 2; // performance downsample
-
+      const step = 2;
       const meanPoints = [];
       const stdPoints = [];
-      const uncertaintyPoints = [];
 
-      for (let latIdx = 0; latIdx < lats.length; latIdx += step) {
+      // lats is sorted ascending (-89.5 → 89.5) but the 2D array rows go north→south (index 0 = 90°)
+      // So data row index = (lats.length - 1 - li)
+      for (let li = 0; li < lats.length; li += step) {
+        const lat = lats[li];
+        const dataRow = lats.length - 1 - li;
+        for (let oi = 0; oi < lons.length; oi += step) {
+          const lon = lons[oi] > 180 ? lons[oi] - 360 : lons[oi];
+          const meanVal = mean?.[dataRow]?.[oi];
+          const sdVal = sd?.[dataRow]?.[oi];
 
-        const lat = -lats[latIdx];
+          if (meanVal === null || meanVal === undefined) continue;
 
-        for (let lonIdx = 0; lonIdx < lons.length; lonIdx += step) {
-
-          const lonRaw = lons[lonIdx];
-          const lon = lonRaw > 180 ? lonRaw - 360 : lonRaw;
-
-          const meanVal = mean?.[latIdx]?.[lonIdx];
-          const sdVal = sd?.[latIdx]?.[lonIdx];
-
-          if (meanVal == null || isNaN(meanVal)) continue;
-
-          // Mean globe
           meanPoints.push({
-            lat,
-            lng: lon,
-            size: 0.01,
-            color: getInterpolatedColorFromValue(
-              meanVal,
-              minVal,
-              maxVal,
-              colorscale
-            )
+            lat, lng: lon,
+            color: getInterpolatedColorFromValue(meanVal, minVal, maxVal, colorscale),
           });
 
-          // Std globe
-          if (sdVal != null && !isNaN(sdVal)) {
-
+          if (sdVal !== null && sdVal !== undefined) {
+            // Normalize to 0–1 (percent of max) for color mapping
+            const sdPct = sdMax > 0 ? Math.min(sdVal / sdMax, 1) : 0;
             stdPoints.push({
-              lat,
-              lng: lon,
-              size: 0.01,
-              color: getInterpolatedColorFromValue(
-                sdVal,
-                0,
-                0.6,
-                stdColorscale
-              )
+              lat, lng: lon,
+              color: getInterpolatedColorFromValue(sdPct, 0, 1, stdColorscale),
             });
-
-            // Uncertainty mask
-            if (sdVal > STD_THRESHOLD) {
-              uncertaintyPoints.push({
-                lat,
-                lng: lon,
-                size: 0.012,
-                color: 'red'
-              });
-            }
           }
         }
       }
 
-      const transformed = {
-        mean: meanPoints,
-        std: stdPoints,
-        uncertainty: uncertaintyPoints
-      };
-
-      setCachedData(prev => ({
-        ...prev,
-        [cacheKey]: {
-          pointsData: transformed,
-          minValue: minVal,
-          maxValue: maxVal
-        }
-      }));
-
+      const transformed = { mean: meanPoints, std: stdPoints };
+      cacheRef.current[cacheKey] = { pointsData: transformed, minValue: minVal, maxValue: maxVal, sdMax };
       setPointsData(transformed);
       setMinValue(minVal);
       setMaxValue(maxVal);
+      setSdMax(sdMax ?? null);
       setError(null);
 
     } catch (err) {
-      if (err.name === 'AbortError') {
-        return;
-      }
-
-      console.error(err);
-      setError('Failed to load data');
+      if (err.name === 'AbortError') return;
+      setError(err.message ?? 'Failed to load data');
+    } finally {
+      setIsLoading(false);
     }
-  });
+  }, [netcdfUrl, colorscale]);
 
   useEffect(() => {
-    if (!netcdfUrl) return;
-
+    if (!netcdfUrl || !feature) return;
     const controller = new AbortController();
-
     fetchData(month, feature, controller.signal);
-
     return () => controller.abort();
-
   }, [month, feature, netcdfUrl, fetchData]);
 
-  // Legends
-  const meanLegend = useMemo(() => {
-    if (minValue == null || maxValue == null) return null;
-    return getLegendFromColorscale(colorscale, minValue, maxValue);
-  }, [minValue, maxValue, colorscale]);
+  const meanLegend = useMemo(() => (
+    minValue == null || maxValue == null ? null
+      : getLegendFromColorscale(colorscale, minValue, maxValue)
+  ), [minValue, maxValue, colorscale]);
 
+  // SD legend shows 0%–100%
   const stdLegend = useMemo(() => {
-    return getLegendFromColorscale(stdColorscale, 0, 0.6);
+    const legend = getLegendFromColorscale(stdColorscale, 0, 100);
+    return {
+      ...legend,
+      labels: legend.labels.map(l => `${l}%`),
+    };
   }, []);
 
   const renderLegend = (legendData) => {
-
     if (!legendData) return null;
-
     return (
-      <div
-        style={{
-          position: 'absolute',
-          top: 60,
-          right: 10,
-          width: 70,
-          height: 'calc(100% - 80px)',
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          pointerEvents: 'none',
-          zIndex: 10
-        }}
-      >
-        <div
-          style={{
-            flex: 2,
-            display: 'flex',
-            flexDirection: 'column-reverse',
-            height: '96%'
-          }}
-        >
+      <div style={{
+        position: 'absolute', top: 60, right: 10,
+        width: 70, height: 'calc(100% - 80px)',
+        display: 'flex', flexDirection: 'row', alignItems: 'center',
+        pointerEvents: 'none', zIndex: 10,
+      }}>
+        <div style={{ flex: 2, display: 'flex', flexDirection: 'column-reverse', height: '96%' }}>
           {legendData.colors.map((c, i) => (
             <div key={i} style={{ flex: 1, backgroundColor: c }} />
           ))}
         </div>
-
-        <div
-          style={{
-            flex: 3,
-            display: 'flex',
-            flexDirection: 'column-reverse',
-            justifyContent: 'space-between',
-            marginLeft: 4,
-            height: '97%'
-          }}
-        >
+        <div style={{
+          flex: 3, display: 'flex', flexDirection: 'column-reverse',
+          justifyContent: 'space-between', marginLeft: 4, height: '97%',
+        }}>
           {legendData.labels.map((lbl, i) => (
-            <div key={i} style={{ color: 'white', fontSize: 12 }}>
-              {`${lbl}`}
-            </div>
+            <div key={i} style={{ color: 'white', fontSize: 12 }}>{lbl}</div>
           ))}
         </div>
       </div>
     );
   };
 
-  // Globe renderer
-  const renderGlobe = (ref, data, legend, title, showUncertainty = false) => {
-
-    const width = isVertical
-      ? dimensions.width
-      : dimensions.width / 2;
-
-    const height = isVertical
-      ? dimensions.height / 2
-      : dimensions.height;
+  const renderGlobe = (ref, data, legend, title) => {
+    const width = isVertical ? dimensions.width : Math.floor(dimensions.width / 2);
+    const height = isVertical ? Math.floor(dimensions.height / 2) : dimensions.height;
 
     return (
       <div style={{ flex: 1, position: 'relative' }}>
-
-        <div
-          style={{
-            position: 'absolute',
-            top: 10,
-            width: '100%',
-            textAlign: 'center',
-            color: 'white',
-            fontSize: 16,
-            zIndex: 5
-          }}
-        >
+        <div style={{
+          position: 'absolute', top: 10, width: '100%',
+          textAlign: 'center', color: 'white', fontSize: 16, zIndex: 5,
+        }}>
           {title}
         </div>
-
         <Globe
           ref={ref}
           width={width}
           height={height}
-          globeImageUrl="//unpkg.com/three-globe/example/img/earth-water.png"
+          globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
           backgroundColor="rgba(0,0,0,0)"
           showAtmosphere={false}
           pointsData={data}
-          pointAltitude="size"
-          pointColor="color"
-          pointRadius={1.4}
-          pointsMerge={true}
+          pointAltitude={0}
+          pointColor={d => d.color}
+          pointRadius={1}
+          pointsMerge={false}
           pointTransitionDuration={0}
-          onGlobeReady={() => setupControls(ref)}
-          onZoom={() => {
-            stopAutoRotate(ref);
-            syncCamera(ref);
-          }}
-          onRotate={() => {
-            stopAutoRotate(ref);
-            syncCamera(ref);
-          }}
         />
-
-        {showUncertainty && (
-          <Globe
-            width={width}
-            height={height}
-            globeImageUrl="//unpkg.com/three-globe/example/img/earth-water.png"
-            backgroundColor="rgba(0,0,0,0)"
-            showAtmosphere={false}
-            pointsData={pointsData.uncertainty}
-            pointAltitude="size"
-            pointColor="color"
-            pointRadius={1.6}
-            pointsMerge={true}
-            pointTransitionDuration={0}
-          />
-        )}
-
         {renderLegend(legend)}
       </div>
     );
   };
 
-  // Render
   return (
     <div
       ref={containerRef}
-      style={{
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-        backgroundColor: 'transparent',
-        overflow: 'hidden'
-      }}
+      style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: 'transparent', overflow: 'hidden' }}
     >
-
       <div style={mapGlobeTitleStyle}>{fullTitle}</div>
 
-      {error && (
-        <div style={{ color: 'red', position: 'absolute', top: 0 }}>
-          {error}
+      {isLoading && (
+        <div style={{ color: 'white', textAlign: 'center', marginTop: 20 }}>Loading globe data...</div>
+      )}
+      {!isLoading && error && (
+        <div style={{ color: '#ff6b6b', textAlign: 'center', marginTop: 20, padding: '0 16px' }}>{error}</div>
+      )}
+      {!isLoading && !error && (
+        <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', width: '100%', height: '100%' }}>
+          {renderGlobe(meanGlobeRef, pointsData.mean, meanLegend, 'Mean')}
+          {renderGlobe(stdGlobeRef, pointsData.std, stdLegend, 'Standard Deviation')}
         </div>
       )}
-
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: isVertical ? 'column' : 'row',
-          width: '100%',
-          height: '100%'
-        }}
-      >
-
-        {renderGlobe(
-          meanGlobeRef,
-          pointsData.mean,
-          meanLegend,
-          'Mean',
-          true
-        )}
-
-        {renderGlobe(
-          stdGlobeRef,
-          pointsData.std,
-          stdLegend,
-          'Standard Deviation',
-          false
-        )}
-
-      </div>
     </div>
   );
 };

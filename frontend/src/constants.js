@@ -43,15 +43,14 @@ export const tooltips = [
     }
 ];
 
-export const STD_THRESHOLD = 0.5;
+export const STD_THRESHOLD = 1.0;
 
 export const stdColorscale = [
-    [0.0, '#121212'],
-    [0.001, '#ffffff'],
-    [0.75, '#ffffff'],
-    [0.8, '#ffe7e7'],
-    [0.85, '#ff0000'],
-    [1.0, '#ff0000'],
+    [0.0, '#1a1a2e'],
+    [0.2, '#e8f4f8'],
+    [0.5, '#ffcccc'],
+    [0.75, '#ff4444'],
+    [1.0, '#cc0000'],
 ];
 
 // Color palette
@@ -82,21 +81,6 @@ export const plotWrapperStyle = {
     height: '100%',
 };
 
-export const infoMessages = {
-    "Feature general": "Select the feature you want to visualize on the map or globe. Each feature provides different insights into species diversity and distribution.",
-    "a_shannon": "Measures species diversity considering both abundance and evenness. Higher values indicate greater diversity.",
-    "a_richness": "The total number of species in a given area. Higher values indicate more species are present.",
-    "a_evenness": "Measures how evenly individuals are distributed among species. Values close to 1 indicate more even distributions.",
-    "a_invsimpson": "Emphasizes dominant species in a community. Higher values indicate greater diversity and less dominance by a single species."
-};
-
-export const featureNames = {
-    "a_shannon": "Shannon Diversity Index",
-    "a_richness": "Species Richness",
-    "a_evenness": "Evenness Index",
-    "a_invsimpson": "Inverse Simpson Index"
-};
-
 export const monthNames = {
     1: 'January',
     2: 'February',
@@ -112,14 +96,6 @@ export const monthNames = {
     12: 'December',
     13: "Annual Mean"
 }
-
-// Dropdown options
-export const featureOptions = [
-    { label: 'Shannon Diversity Index', value: 'a_shannon' },
-    { label: 'Species Richness', value: 'a_richness' },
-    { label: 'Evenness Index', value: 'a_evenness' },
-    { label: 'Inverse Simpson Index', value: 'a_invsimpson' },
-];
 
 export const BlueCloudLogo = {
     alt: 'Blue-Cloud',

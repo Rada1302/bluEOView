@@ -3,15 +3,18 @@ import Plot from 'react-plotly.js';
 import {
   colors,
   mapGlobeTitleStyle,
-  containerStyle,
-  plotWrapperStyle,
   STD_THRESHOLD,
-  stdColorscale
+  stdColorscale,
 } from '../constants';
-import {
-  generateColorStops,
-  generateColorbarTicks,
-} from '../utils';
+import { generateColorStops, generateColorbarTicks } from '../utils';
+
+const axisBase = {
+  showgrid: false,
+  zeroline: false,
+  showline: false,
+  ticks: '',
+  showticklabels: false,
+};
 
 const MapDisplay = ({
   month,
@@ -27,10 +30,12 @@ const MapDisplay = ({
   const [stdData, setStdData] = useState([]);
   const [minValue, setMinValue] = useState(null);
   const [maxValue, setMaxValue] = useState(null);
+  const [sdMax, setSdMax] = useState(null);
   const [error, setError] = useState(null);
-
-  // Track screen size for vertical stacking
-  const [isVertical, setIsVertical] = useState(typeof window !== 'undefined' ? window.innerWidth < 900 : false);
+  const [loading, setLoading] = useState(false);
+  const [isVertical, setIsVertical] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 900 : false
+  );
 
   useEffect(() => {
     const handleResize = () => setIsVertical(window.innerWidth < 900);
@@ -40,220 +45,213 @@ const MapDisplay = ({
 
   const colorscale = useMemo(() => generateColorStops(colors), []);
 
+  // Fetch
   useEffect(() => {
-    if (!netcdfUrl) return;
+    if (!feature || !netcdfUrl) return;
     const controller = new AbortController();
-    const fetchData = async () => {
-      try {
-        const params = new URLSearchParams({
-          feature,
-          timeIndex: month.toString(),
-          file: netcdfUrl
-        });
 
-        const res = await fetch(
-          `/api/diversity-map?${params.toString()}`,
-          { signal: controller.signal }
-        );
-        if (!res.ok) throw new Error('Fetch failed');
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({ feature, timeIndex: month.toString(), file: netcdfUrl });
+        const res = await fetch(`/api/diversity-map?${params}`, { signal: controller.signal });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          throw new Error(json?.error ?? `HTTP ${res.status}`);
+        }
         const json = await res.json();
+        const rawSd = json.sd ?? [];
+        const sdMaxV = json.sdMax ?? null;
+        const sdPct = sdMaxV > 0
+          ? rawSd.map(row => row.map(v => v === null ? null : Math.round(v / sdMaxV * 100 * 10) / 10))
+          : rawSd;
         setLats(json.lats ?? []);
         setLons(json.lons ?? []);
         setMeanData(json.mean ?? []);
-        setStdData(json.sd ?? []);
+        setStdData(sdPct);
         setMinValue(json.minValue ?? null);
         setMaxValue(json.maxValue ?? null);
+        setSdMax(sdMaxV);
       } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error(err);
-          setError('Failed to load data');
-        }
+        if (err.name !== 'AbortError') setError(err.message);
+      } finally {
+        setLoading(false);
       }
     };
+
     fetchData();
     return () => controller.abort();
   }, [month, feature, netcdfUrl]);
 
   const { tickvals, ticktext } = useMemo(() => {
     if (minValue == null || maxValue == null) return { tickvals: [], ticktext: [] };
-    const numBins = colorscale.length / 2;
-    return generateColorbarTicks(minValue, maxValue, numBins);
+    return generateColorbarTicks(minValue, maxValue, colorscale.length);
   }, [minValue, maxValue, colorscale]);
 
-  const uncertaintyMask = useMemo(() => {
-    return stdData.map(row => row.map(v => (v > STD_THRESHOLD ? 1 : 0)));
-  }, [stdData]);
+  const sdThreshold = sdMax != null ? sdMax * 0.5 : STD_THRESHOLD;
 
-  const hoverWarnings = useMemo(() => {
-    return stdData.map(row =>
-      row.map(v => v > STD_THRESHOLD ? '<br> High uncertainty (SD > 0.5)' : '')
-    );
-  }, [stdData]);
+  const hasHighSD = useMemo(
+    () => stdData.some(row => row.some(v => v !== null && v > sdThreshold)),
+    [stdData, sdThreshold]
+  );
+  const uncertaintyMask = useMemo(
+    () => stdData.map(row => row.map(v => (v !== null && v > sdThreshold ? 1 : 0))),
+    [stdData, sdThreshold]
+  );
 
-  const hasHighSD = useMemo(() => {
-    return stdData.some(row => row.some(v => v > STD_THRESHOLD));
-  }, [stdData]);
-
-  const plotData = useMemo(() => {
-    const meanHeatmap = {
-      type: 'heatmap',
-      z: meanData,
-      x: lons,
-      y: lats,
-      customdata: stdData.map((row, i) =>
-        row.map((v, j) => [v === null ? "Unknown" : v.toFixed(3), hoverWarnings[i][j]])
-      ),
-      colorscale,
-      zmin: minValue,
-      zmax: maxValue,
-      colorbar: {
-        tickvals,
-        ticktext,
-        ticks: 'outside',
-        x: isVertical ? 1.02 : 0.46,
-        y: isVertical ? 0.78 : 0.5,
-        len: isVertical ? 0.5 : 0.7,
-        tickfont: { color: 'white' },
-      },
-      hovertemplate: ` Lon: %{x}<br> Lat: %{y}<br> Mean: %{customdata[0]}<b style="color:red">%{customdata[1]}</b><extra></extra>`,
-      xaxis: 'x',
-      yaxis: 'y',
-    };
-
-    const traces = [meanHeatmap];
-
-    if (hasHighSD) {
-      traces.push({
-        type: 'heatmap',
-        z: uncertaintyMask,
-        x: lons,
-        y: lats,
-        colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'red']],
-        zsmooth: false,
-        showscale: false,
-        hoverinfo: 'skip',
-        xaxis: 'x',
-        yaxis: 'y',
-      });
-    }
-
-    const stdHeatmap = {
-      type: 'heatmap',
-      z: stdData,
-      x: lons,
-      y: lats,
-      customdata: stdData.map(row => row.map(v => (v === null ? 'Unknown' : v.toFixed(2)))),
-      colorscale: stdColorscale,
-      zmin: 0,
-      zmax: 0.6,
-      colorbar: {
-        tickvals: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
-        ticktext: ['0.0', '0.1', '0.2', '0.3', '0.4', '0.5', '> 0.5'],
-        ticks: 'outside',
-        x: 1.02,
-        y: isVertical ? 0.22 : 0.5,
-        len: isVertical ? 0.5 : 0.7,
-        tickfont: { color: 'white' },
-      },
-      hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>Std Dev: %{customdata}<extra></extra>',
-      xaxis: 'x2',
-      yaxis: 'y2',
-    };
-    traces.push(stdHeatmap);
-
-    return traces;
-  }, [meanData, stdData, uncertaintyMask, lats, lons, colorscale, minValue, maxValue, tickvals, ticktext, isVertical]);
-  const layout = useMemo(() => {
-    const base = {
-      grid: { rows: isVertical ? 2 : 1, columns: isVertical ? 1 : 2, pattern: 'independent' },
-      dragmode: 'zoom',
-      margin: { l: 20, r: 80, t: 60, b: 20 },
-      paper_bgcolor: 'transparent',
-      plot_bgcolor: 'transparent',
-      annotations: [
-        {
-          text: 'Mean',
-          x: isVertical ? 0.5 : 0.22,
-          y: isVertical ? 1.02 : 0.95,
-          xref: 'paper', yref: 'paper',
-          showarrow: false,
-          font: { size: 16, color: 'white' },
-          xanchor: 'center'
-        },
-        {
-          text: 'Standard Deviation',
-          x: isVertical ? 0.5 : 0.78,
-          y: isVertical ? 0.48 : 0.95,
-          xref: 'paper', yref: 'paper',
-          showarrow: false,
-          font: { size: 16, color: 'white' },
-          xanchor: 'center'
-        },
-      ],
-    };
-
-    const axisTemplate = {
-      showgrid: false,
-      zeroline: false,
-      showline: false,
-      ticks: '',
-      showticklabels: false,
-      constrain: 'domain',
-      scaleanchor: 'y',
-      scaleratio: 1,
-    };
-
-    base.xaxis = {
-      ...axisTemplate,
-      domain: isVertical ? [0, 1] : [0, 0.44],
-    };
-    base.yaxis = {
-      ...axisTemplate,
-      domain: isVertical ? [0.56, 1] : [0, 1],
-      autorange: 'reversed',
-    };
-
-    base.xaxis2 = {
-      ...axisTemplate,
-      domain: isVertical ? [0, 1] : [0.56, 1],
-    };
-    base.yaxis2 = {
-      ...axisTemplate,
-      domain: isVertical ? [0, 0.44] : [0, 1],
-      autorange: 'reversed',
-      anchor: 'x2'
-    };
-
-    if (zoomedArea?.x && zoomedArea?.y) {
-      ['xaxis', 'xaxis2'].forEach(ax => { base[ax].range = zoomedArea.x; base[ax].autorange = false; });
-      ['yaxis', 'yaxis2'].forEach(ax => { base[ax].range = zoomedArea.y; base[ax].autorange = false; });
-    }
-
-    return base;
-  }, [zoomedArea, isVertical]);
+  // Shared layout for both plots
+  const sharedLayout = useMemo(() => ({
+    margin: { l: 0, r: 60, t: 30, b: 0 },
+    paper_bgcolor: 'rgba(0,0,0,0.5)',
+    plot_bgcolor: '#0a1628',
+    autosize: true,
+    dragmode: 'zoom',
+    xaxis: {
+      ...axisBase,
+      ...(zoomedArea?.x ? { range: zoomedArea.x, autorange: false } : { autorange: true }),
+    },
+    yaxis: {
+      ...axisBase,
+      autorange: zoomedArea?.y ? false : 'reversed',
+      ...(zoomedArea?.y ? { range: zoomedArea.y } : {}),
+    },
+  }), [zoomedArea]);
 
   const handleRelayout = useCallback(evt => {
-    const xr = evt['xaxis.range'] || [evt['xaxis.range[0]'], evt['xaxis.range[1]']];
-    const yr = evt['yaxis.range'] || [evt['yaxis.range[0]'], evt['yaxis.range[1]']];
+    if (evt['xaxis.autorange'] || evt['yaxis.autorange']) {
+      onZoomedAreaChange?.(null);
+      return;
+    }
+    const xr = evt['xaxis.range'] ?? [evt['xaxis.range[0]'], evt['xaxis.range[1]']];
+    const yr = evt['yaxis.range'] ?? [evt['yaxis.range[0]'], evt['yaxis.range[1]']];
     if (xr?.[0] != null && yr?.[0] != null) onZoomedAreaChange?.({ x: xr, y: yr });
-    else if (evt['xaxis.autorange']) onZoomedAreaChange?.(null);
   }, [onZoomedAreaChange]);
 
+  const hasData = meanData.length > 0 && lats.length > 0 && lons.length > 0;
+
+  const plotStyle = { width: '100%', height: '100%' };
+  const wrapStyle = {
+    flex: 1,
+    minWidth: 0,
+    position: 'relative',
+  };
+  const labelStyle = {
+    position: 'absolute',
+    top: 6,
+    left: 0,
+    width: '100%',
+    textAlign: 'center',
+    color: 'white',
+    fontSize: 15,
+    pointerEvents: 'none',
+    zIndex: 2,
+  };
+
   return (
-    <div style={containerStyle}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      {/* Title */}
       <div style={mapGlobeTitleStyle}>{fullTitle}</div>
-      {error && <div style={{ color: 'red', textAlign: 'center' }}>{error}</div>}
-      <div style={plotWrapperStyle}>
-        <Plot
-          data={plotData}
-          layout={layout}
-          useResizeHandler
-          style={{ width: '100%', height: '100%' }}
-          onRelayout={handleRelayout}
-          onDoubleClick={() => onZoomedAreaChange?.(null)}
-          config={{ responsive: true, displayModeBar: false }}
-        />
-      </div>
+
+      {loading && (
+        <div style={{ color: 'white', textAlign: 'center', paddingTop: 60 }}>Loading…</div>
+      )}
+      {!loading && error && (
+        <div style={{ color: '#ff6b6b', textAlign: 'center', padding: '60px 16px' }}>{error}</div>
+      )}
+
+      {!loading && !error && hasData && (
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: isVertical ? 'column' : 'row',
+          gap: 4,
+          paddingTop: 40, // space for title
+        }}>
+          {/* Mean */}
+          <div style={wrapStyle}>
+            <div style={labelStyle}>Mean</div>
+            <Plot
+              data={[
+                {
+                  type: 'heatmap',
+                  z: meanData,
+                  x: lons,
+                  y: lats,
+                  colorscale,
+                  zauto: false,
+                  zsmooth: false,
+                  zmin: minValue,
+                  zmax: maxValue,
+                  colorbar: {
+                    tickvals, ticktext,
+                    tickcolor: 'white',
+                    tickfont: { color: 'white' },
+                    ticks: 'outside',
+                    thickness: 15,
+                  },
+                  hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>Mean: %{z}<extra></extra>',
+                },
+                ...(hasHighSD ? [{
+                  type: 'heatmap',
+                  z: uncertaintyMask,
+                  x: lons,
+                  y: lats,
+                  colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(255,0,0,0.5)']],
+                  zsmooth: false,
+                  zmin: 0, zmax: 1,
+                  showscale: false,
+                  hoverinfo: 'skip',
+                }] : []),
+              ]}
+              layout={sharedLayout}
+              useResizeHandler
+              style={plotStyle}
+              onRelayout={handleRelayout}
+              onDoubleClick={() => onZoomedAreaChange?.(null)}
+              config={{ responsive: true, displayModeBar: false }}
+            />
+          </div>
+
+          {/* Standard Deviation */}
+          <div style={wrapStyle}>
+            <div style={labelStyle}>Standard Deviation</div>
+            <Plot
+              data={[{
+                type: 'heatmap',
+                z: stdData,
+                x: lons,
+                y: lats,
+                colorscale: stdColorscale,
+                zsmooth: false,
+                zmin: 0,
+                zmax: 100,
+                colorbar: {
+                  tickvals: [0, 25, 50, 75, 100],
+                  ticktext: ['0%', '25%', '50%', '75%', '100%'],
+                  tickcolor: 'white',
+                  tickfont: { color: 'white' },
+                  ticks: 'outside',
+                  thickness: 15,
+                },
+                hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>SD: %{z}%<extra></extra>',
+              }]}
+              layout={sharedLayout}
+              useResizeHandler
+              style={plotStyle}
+              onRelayout={handleRelayout}
+              onDoubleClick={() => onZoomedAreaChange?.(null)}
+              config={{ responsive: true, displayModeBar: false }}
+            />
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && !hasData && (
+        <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', paddingTop: 60 }}>
+          No data available.
+        </div>
+      )}
     </div>
   );
 };

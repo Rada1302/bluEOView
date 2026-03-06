@@ -5,151 +5,82 @@ import {
   MenuItem,
   Select,
   IconButton,
-  ToggleButtonGroup,
-  ToggleButton,
 } from '@mui/material';
-import { featureOptions, featureNames } from '../constants';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
-const LabeledSelect = ({
-  label,
-  id,
-  value,
-  options,
-  onChange,
-  infoText,
-  openInfoModal,
-  useSegmented = true,
-}) => (
-  <Box sx={{ display: 'flex', flexDirection: 'row', mb: 1, gap: 1 }}>
-    {useSegmented ? (
-      <Box
-        sx={{
-          backgroundColor: 'rgba(255, 255, 255, 0.12)',
-          backdropFilter: 'blur(12px)',
-          borderRadius: 2,
-          flex: 1,
-          mr: 0.5,
-          border: '1px solid rgba(255, 255, 255, 0.25)',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          overflow: 'hidden',
-        }}
-      >
-        <IconButton
-          onClick={() => openInfoModal(featureNames[value], value)}
-          size="small"
-          sx={{ color: 'white', ml: 0.5 }}
-        >
-          <InfoOutlinedIcon fontSize="small" />
-        </IconButton>
-
-        <ToggleButtonGroup
-          exclusive
-          value={value}
-          onChange={(e, newValue) => {
-            if (newValue !== null) onChange({ target: { value: newValue } });
-          }}
-          sx={{
-            flex: 1,
-            '& .MuiToggleButton-root': {
-              color: 'white',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
-              textTransform: 'none',
-              flex: 1,
-              fontSize: '0.85rem',
-              '&.Mui-selected': {
-                backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                color: 'white',
-              },
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-              },
-            },
-          }}
-        >
-          {options.map((opt) => (
-            <ToggleButton key={opt.value} value={opt.value}>
-              {opt.label}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+const ControlPanel = ({ feature, featureOptions = [], onFeatureChange, openInfoModal }) => {
+  // Don't render until we have options and a valid selection
+  if (!featureOptions.length || feature == null) {
+    return (
+      <Box sx={{
+        height: 40,
+        display: 'flex',
+        alignItems: 'center',
+        color: 'rgba(255,255,255,0.5)',
+        fontSize: '0.9rem',
+        pl: 1,
+      }}>
+        {featureOptions.length === 0 ? 'Loading features...' : 'Selecting feature...'}
       </Box>
-    ) : (
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 1 }}>
+      <IconButton
+        onClick={() => {
+          const found = featureOptions.find(f => f.value === feature);
+          openInfoModal?.(found?.label ?? feature, feature);
+        }}
+        size="small"
+        sx={{ color: 'white', flexShrink: 0 }}
+      >
+        <InfoOutlinedIcon fontSize="small" />
+      </IconButton>
+
       <FormControl
         variant="outlined"
         size="small"
         sx={{
+          flex: 1,
           backgroundColor: 'rgba(255, 255, 255, 0.12)',
           backdropFilter: 'blur(12px)',
           borderRadius: 2,
-          flex: 1,
-          mr: 0.5,
           border: '1px solid rgba(255, 255, 255, 0.25)',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
           '& .MuiInputBase-input': { color: '#FFFFFF' },
           '& .MuiSvgIcon-root': { color: '#FFFFFF' },
+          '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
         }}
       >
         <Select
-          id={id}
-          value={value}
-          onChange={onChange}
-          startAdornment={
-            <IconButton
-              onClick={() => openInfoModal(featureNames[value], value)}
-              size="small"
-              sx={{ color: 'white' }}
-            >
-              <InfoOutlinedIcon fontSize="small" />
-            </IconButton>
-          }
+          value={feature}
+          onChange={onFeatureChange}
           MenuProps={{
             PaperProps: {
               sx: {
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                maxHeight: 400,
+                backgroundColor: 'rgba(30, 30, 50, 0.97)',
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255, 255, 255, 0.25)',
                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
                 '& .MuiMenuItem-root': {
                   color: '#FFFFFF',
+                  fontSize: '0.85rem',
                   '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.15)' },
+                  '&.Mui-selected': { backgroundColor: 'rgba(255, 255, 255, 0.2)' },
                 },
               },
             },
           }}
         >
-          {options.map((opt) => (
+          {featureOptions.map((opt) => (
             <MenuItem key={opt.value} value={opt.value}>
               {opt.label}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
-    )}
-  </Box>
-);
-
-const ControlPanel = ({ feature, onFeatureChange, openInfoModal }) => {
-  return (
-    <Box
-      sx={{
-        borderRadius: 1,
-        position: 'relative',
-      }}
-    >
-      {/* Feature Selection */}
-      <LabeledSelect
-        label="Feature"
-        id="feature"
-        value={feature}
-        options={featureOptions}
-        onChange={onFeatureChange}
-        infoText="Feature general"
-        openInfoModal={openInfoModal}
-        useSegmented={true}
-      />
     </Box>
   );
 };
