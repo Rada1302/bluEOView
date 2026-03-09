@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Plot from 'react-plotly.js';
 import {
   colors,
   mapGlobeTitleStyle,
   STD_THRESHOLD,
-  stdColorscale,
 } from '../constants';
 import { generateColorStops, generateColorbarTicks } from '../utils';
 
@@ -14,6 +13,65 @@ const axisBase = {
   showline: false,
   ticks: '',
   showticklabels: false,
+};
+
+const MARGIN = { l: 20, r: 70, t: 50, b: 0 };
+
+const HatchOverlay = ({ uncertaintyMask, lats, lons, margin }) => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !uncertaintyMask.length) return;
+    const W = canvas.offsetWidth;
+    const H = canvas.offsetHeight;
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
+
+    const plotW = W - margin.l - margin.r;
+    const plotH = H - margin.t - margin.b;
+    const nRows = uncertaintyMask.length;
+    const nCols = uncertaintyMask[0]?.length ?? 0;
+    if (!nRows || !nCols) return;
+
+    const cellW = plotW / nCols;
+    const cellH = plotH / nRows;
+
+    // Draw hatch pattern only over masked cells
+    ctx.save();
+    ctx.beginPath();
+    for (let r = 0; r < nRows; r++) {
+      for (let c = 0; c < nCols; c++) {
+        if (uncertaintyMask[r][c] === 1) {
+          const x = margin.l + c * cellW;
+          const y = margin.t + r * cellH;
+          ctx.rect(x, y, cellW, cellH);
+        }
+      }
+    }
+    ctx.clip();
+
+    // Draw diagonal lines across the whole canvas (clipped to masked cells)
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = 1.2;
+    const step = 5;
+    for (let i = -(H); i < W + H; i += step) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i + H, H);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }, [uncertaintyMask, margin]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3 }}
+    />
+  );
 };
 
 const MapDisplay = ({
@@ -43,9 +101,18 @@ const MapDisplay = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const colorscale = useMemo(() => generateColorStops(colors), []);
+  // Discrete colorscale: each color occupies an equal bin with hard edges
+  const colorscale = useMemo(() => {
+    const n = colors.length;
+    const stops = [];
+    colors.forEach((color, i) => {
+      const pos = parseFloat((i / (n - 1)).toFixed(6));
+      if (i > 0) stops.push([pos, colors[i - 1]]); // hard left edge of bin
+      stops.push([pos, color]);
+    });
+    return stops;
+  }, []);
 
-  // Fetch
   useEffect(() => {
     if (!feature || !netcdfUrl) return;
     const controller = new AbortController();
@@ -89,7 +156,7 @@ const MapDisplay = ({
     return generateColorbarTicks(minValue, maxValue, colorscale.length);
   }, [minValue, maxValue, colorscale]);
 
-  const sdThreshold = sdMax != null ? sdMax * 0.5 : STD_THRESHOLD;
+  const sdThreshold = 50;
 
   const hasHighSD = useMemo(
     () => stdData.some(row => row.some(v => v !== null && v > sdThreshold)),
@@ -100,11 +167,25 @@ const MapDisplay = ({
     [stdData, sdThreshold]
   );
 
-  // Shared layout for both plots
+  const colorbarBase = {
+    tickcolor: 'white',
+    tickfont: { color: 'white', size: 11 },
+    ticks: 'outside',
+    thickness: 18,
+    len: 0.84,
+    lenmode: 'fraction',
+    yanchor: 'top',
+    y: 1,
+    xanchor: 'left',
+    x: 1.01,
+    outlinecolor: 'rgba(255,255,255,0.15)',
+    outlinewidth: 1,
+  };
+
   const sharedLayout = useMemo(() => ({
-    margin: { l: 0, r: 60, t: 30, b: 0 },
-    paper_bgcolor: 'rgba(0,0,0,0.5)',
-    plot_bgcolor: '#0a1628',
+    margin: MARGIN,
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
     autosize: true,
     dragmode: 'zoom',
     xaxis: {
@@ -130,126 +211,125 @@ const MapDisplay = ({
 
   const hasData = meanData.length > 0 && lats.length > 0 && lons.length > 0;
 
-  const plotStyle = { width: '100%', height: '100%' };
-  const wrapStyle = {
-    flex: 1,
-    minWidth: 0,
+  const aspectBox = {
     position: 'relative',
+    width: '100%',
+    paddingTop: '56.25%',
   };
-  const labelStyle = {
+  const aspectInner = {
     position: 'absolute',
-    top: 6,
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(18,18,18,0.6)',
+    borderRadius: 6,
+    overflow: 'hidden',
+  };
+
+  const subLabel = {
+    position: 'absolute',
+    top: 10,
     left: 0,
     width: '100%',
     textAlign: 'center',
-    color: 'white',
-    fontSize: 15,
+    fontSize: 17,
     pointerEvents: 'none',
     zIndex: 2,
   };
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-      {/* Title */}
-      <div style={mapGlobeTitleStyle}>{fullTitle}</div>
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 6 }}>
 
       {loading && (
-        <div style={{ color: 'white', textAlign: 'center', paddingTop: 60 }}>Loading…</div>
+        <div style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', padding: '40px 0' }}>Loading…</div>
       )}
       {!loading && error && (
-        <div style={{ color: '#ff6b6b', textAlign: 'center', padding: '60px 16px' }}>{error}</div>
+        <div style={{ color: '#ff6b6b', textAlign: 'center', padding: '40px 16px' }}>{error}</div>
+      )}
+      {!loading && !error && !hasData && (
+        <div style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '40px 0' }}>No data available.</div>
       )}
 
       {!loading && !error && hasData && (
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: isVertical ? 'column' : 'row',
-          gap: 4,
-          paddingTop: 40, // space for title
-        }}>
+        <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: 8 }}>
+
           {/* Mean */}
-          <div style={wrapStyle}>
-            <div style={labelStyle}>Mean</div>
-            <Plot
-              data={[
-                {
-                  type: 'heatmap',
-                  z: meanData,
-                  x: lons,
-                  y: lats,
-                  colorscale,
-                  zauto: false,
-                  zsmooth: false,
-                  zmin: minValue,
-                  zmax: maxValue,
-                  colorbar: {
-                    tickvals, ticktext,
-                    tickcolor: 'white',
-                    tickfont: { color: 'white' },
-                    ticks: 'outside',
-                    thickness: 15,
-                  },
-                  hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>Mean: %{z}<extra></extra>',
-                },
-                ...(hasHighSD ? [{
-                  type: 'heatmap',
-                  z: uncertaintyMask,
-                  x: lons,
-                  y: lats,
-                  colorscale: [[0, 'rgba(0,0,0,0)'], [1, 'rgba(255,0,0,0.5)']],
-                  zsmooth: false,
-                  zmin: 0, zmax: 1,
-                  showscale: false,
-                  hoverinfo: 'skip',
-                }] : []),
-              ]}
-              layout={sharedLayout}
-              useResizeHandler
-              style={plotStyle}
-              onRelayout={handleRelayout}
-              onDoubleClick={() => onZoomedAreaChange?.(null)}
-              config={{ responsive: true, displayModeBar: false }}
-            />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={aspectBox}>
+              <div style={aspectInner}>
+                <div style={subLabel}>{fullTitle} (Mean)</div>
+                <Plot
+                  data={[
+                    {
+                      type: 'heatmap',
+                      z: meanData,
+                      x: lons,
+                      y: lats,
+                      colorscale,
+                      zauto: false,
+                      zsmooth: false,
+                      zmin: minValue,
+                      zmax: maxValue,
+                      colorbar: { ...colorbarBase, tickvals, ticktext },
+                      hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>Mean: %{z}<extra></extra>',
+                    },
+                    // hatch overlay rendered via SVG below
+                  ]}
+                  layout={sharedLayout}
+                  useResizeHandler
+                  style={{ width: '100%', height: '100%' }}
+                  onRelayout={handleRelayout}
+                  onDoubleClick={() => onZoomedAreaChange?.(null)}
+                  config={{ responsive: true, displayModeBar: false }}
+                />
+                {hasHighSD && (
+                  <HatchOverlay
+                    uncertaintyMask={uncertaintyMask}
+                    lats={lats}
+                    lons={lons}
+                    margin={MARGIN}
+                  />
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Standard Deviation */}
-          <div style={wrapStyle}>
-            <div style={labelStyle}>Standard Deviation</div>
-            <Plot
-              data={[{
-                type: 'heatmap',
-                z: stdData,
-                x: lons,
-                y: lats,
-                colorscale: stdColorscale,
-                zsmooth: false,
-                zmin: 0,
-                zmax: 100,
-                colorbar: {
-                  tickvals: [0, 25, 50, 75, 100],
-                  ticktext: ['0%', '25%', '50%', '75%', '100%'],
-                  tickcolor: 'white',
-                  tickfont: { color: 'white' },
-                  ticks: 'outside',
-                  thickness: 15,
-                },
-                hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>SD: %{z}%<extra></extra>',
-              }]}
-              layout={sharedLayout}
-              useResizeHandler
-              style={plotStyle}
-              onRelayout={handleRelayout}
-              onDoubleClick={() => onZoomedAreaChange?.(null)}
-              config={{ responsive: true, displayModeBar: false }}
-            />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={aspectBox}>
+              <div style={aspectInner}>
+                <div style={subLabel}>{fullTitle} (Standard Deviation)</div>
+                <Plot
+                  data={[{
+                    type: 'heatmap',
+                    z: stdData,
+                    x: lons,
+                    y: lats,
+                    colorscale: [
+                      [0, '#ffffff'],
+                      [0.5, '#ffffff'],
+                      [0.5, '#ff2222'],
+                      [1.0, '#cc0000'],
+                    ],
+                    zsmooth: false,
+                    zmin: 0,
+                    zmax: 100,
+                    colorbar: {
+                      ...colorbarBase,
+                      tickvals: [0, 25, 50, 75, 100],
+                      ticktext: ['0%', '25%', '50%', '75%', '100%'],
+                    },
+                    hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>SD: %{z}%<extra></extra>',
+                  }]}
+                  layout={sharedLayout}
+                  useResizeHandler
+                  style={{ width: '100%', height: '100%' }}
+                  onRelayout={handleRelayout}
+                  onDoubleClick={() => onZoomedAreaChange?.(null)}
+                  config={{ responsive: true, displayModeBar: false }}
+                />
+              </div>
+            </div>
           </div>
-        </div>
-      )}
 
-      {!loading && !error && !hasData && (
-        <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', paddingTop: 60 }}>
-          No data available.
         </div>
       )}
     </div>
