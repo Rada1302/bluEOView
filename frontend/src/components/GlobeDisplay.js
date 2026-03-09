@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import Globe from 'react-globe.gl';
 
 import {
@@ -7,22 +7,30 @@ import {
   getLegendFromColorscale
 } from '../utils';
 
-import {
-  colors,
-  stdColorscale,
-  mapGlobeTitleStyle
-} from '../constants';
+import { colors } from '../constants';
+
+const SD_COLORSCALE = [
+  [0, '#ffffff'],
+  [0.5, '#ffffff'],
+  [0.5, '#ff2222'],
+  [1.0, '#cc0000'],
+];
+
+const SD_STOPS = SD_COLORSCALE.map(([pos, color]) => [pos, color]);
+
+const SD_THRESHOLD = 50; // percent
 
 const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
-  const containerRef = useRef(null);
+  const meanContainerRef = useRef(null);
+  const stdContainerRef = useRef(null);
   const meanGlobeRef = useRef();
   const stdGlobeRef = useRef();
 
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [pointsData, setPointsData] = useState({ mean: [], std: [] });
+  const [meanDims, setMeanDims] = useState({ width: 0, height: 0 });
+  const [stdDims, setStdDims] = useState({ width: 0, height: 0 });
+  const [pointsData, setPointsData] = useState({ mean: [], std: [], hatch: [] });
   const [minValue, setMinValue] = useState(null);
   const [maxValue, setMaxValue] = useState(null);
-  const [sdMax, setSdMax] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isVertical, setIsVertical] = useState(
@@ -33,16 +41,20 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
   const colorscale = useMemo(() => generateColorStops(colors), []);
 
   useEffect(() => {
-    const handleResize = () => {
+    const measure = () => {
       setIsVertical(window.innerWidth < 900);
-      if (containerRef.current) {
-        const { offsetWidth, offsetHeight } = containerRef.current;
-        setDimensions({ width: offsetWidth, height: offsetHeight });
+      if (meanContainerRef.current) {
+        const { offsetWidth, offsetHeight } = meanContainerRef.current;
+        setMeanDims({ width: offsetWidth, height: offsetHeight });
+      }
+      if (stdContainerRef.current) {
+        const { offsetWidth, offsetHeight } = stdContainerRef.current;
+        setStdDims({ width: offsetWidth, height: offsetHeight });
       }
     };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
   }, []);
 
   const fetchData = useCallback(async (month, feature, signal) => {
@@ -54,7 +66,6 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
       setPointsData(c.pointsData);
       setMinValue(c.minValue);
       setMaxValue(c.maxValue);
-      setSdMax(c.sdMax ?? null);
       return;
     }
 
@@ -74,9 +85,8 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
       const step = 2;
       const meanPoints = [];
       const stdPoints = [];
+      const hatchPoints = []; // dark dots over high-SD cells on the mean globe
 
-      // lats is sorted ascending (-89.5 → 89.5) but the 2D array rows go north→south (index 0 = 90°)
-      // So data row index = (lats.length - 1 - li)
       for (let li = 0; li < lats.length; li += step) {
         const lat = lats[li];
         const dataRow = lats.length - 1 - li;
@@ -93,22 +103,27 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
           });
 
           if (sdVal !== null && sdVal !== undefined) {
-            // Normalize to 0–1 (percent of max) for color mapping
-            const sdPct = sdMax > 0 ? Math.min(sdVal / sdMax, 1) : 0;
+            // sdVal is raw, normalize to 0–100% using sdMax
+            const sdPct = sdMax > 0 ? (sdVal / sdMax) * 100 : 0;
+
+            // SD globe: white below 50%, red above
             stdPoints.push({
               lat, lng: lon,
-              color: getInterpolatedColorFromValue(sdPct, 0, 1, stdColorscale),
+              color: sdPct <= 50 ? '#ffffff' : '#ff2222',
             });
+
+            if (sdPct > SD_THRESHOLD) {
+              hatchPoints.push({ lat, lng: lon, color: 'rgba(0,0,0,0.55)' });
+            }
           }
         }
       }
 
-      const transformed = { mean: meanPoints, std: stdPoints };
-      cacheRef.current[cacheKey] = { pointsData: transformed, minValue: minVal, maxValue: maxVal, sdMax };
+      const transformed = { mean: meanPoints, std: stdPoints, hatch: hatchPoints };
+      cacheRef.current[cacheKey] = { pointsData: transformed, minValue: minVal, maxValue: maxVal };
       setPointsData(transformed);
       setMinValue(minVal);
       setMaxValue(maxVal);
-      setSdMax(sdMax ?? null);
       setError(null);
 
     } catch (err) {
@@ -131,21 +146,17 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
       : getLegendFromColorscale(colorscale, minValue, maxValue)
   ), [minValue, maxValue, colorscale]);
 
-  // SD legend shows 0%–100%
-  const stdLegend = useMemo(() => {
-    const legend = getLegendFromColorscale(stdColorscale, 0, 100);
-    return {
-      ...legend,
-      labels: legend.labels.map(l => `${l}%`),
-    };
-  }, []);
+  const stdLegend = useMemo(() => ({
+    colors: ['#ffffff', '#ff2222'],
+    labels: ['0%', '50%', '100%'],
+  }), []);
 
   const renderLegend = (legendData) => {
     if (!legendData) return null;
     return (
       <div style={{
-        position: 'absolute', top: 60, right: 10,
-        width: 70, height: 'calc(100% - 80px)',
+        position: 'absolute', top: 50, right: 10,
+        width: 70, height: 'calc(100% - 70px)',
         display: 'flex', flexDirection: 'row', alignItems: 'center',
         pointerEvents: 'none', zIndex: 10,
       }}>
@@ -166,54 +177,54 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
     );
   };
 
-  const renderGlobe = (ref, data, legend, title) => {
-    const width = isVertical ? dimensions.width : Math.floor(dimensions.width / 2);
-    const height = isVertical ? Math.floor(dimensions.height / 2) : dimensions.height;
-
-    return (
-      <div style={{ flex: 1, position: 'relative' }}>
-        <div style={{
-          position: 'absolute', top: 10, width: '100%',
-          textAlign: 'center', color: 'white', fontSize: 16, zIndex: 5,
-        }}>
-          {title}
-        </div>
-        <Globe
-          ref={ref}
-          width={width}
-          height={height}
-          globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
-          backgroundColor="rgba(0,0,0,0)"
-          showAtmosphere={false}
-          pointsData={data}
-          pointAltitude={0}
-          pointColor={d => d.color}
-          pointRadius={1}
-          pointsMerge={false}
-          pointTransitionDuration={0}
-        />
-        {renderLegend(legend)}
-      </div>
-    );
+  const aspectBox = { position: 'relative', width: '100%', paddingTop: '56.25%' };
+  const aspectInner = {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(18,18,18,0.6)', borderRadius: 6, overflow: 'hidden',
+  };
+  const subLabel = {
+    position: 'absolute', top: 10, left: 0, width: '100%',
+    textAlign: 'center', fontSize: 17, color: 'white',
+    pointerEvents: 'none', zIndex: 5,
   };
 
-  return (
-    <div
-      ref={containerRef}
-      style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: 'transparent', overflow: 'hidden' }}
-    >
-      <div style={mapGlobeTitleStyle}>{fullTitle}</div>
+  const renderGlobe = (containerRef, globeRef, data, hatchData, legend, title, dims) => (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={aspectBox}>
+        <div ref={containerRef} style={aspectInner}>
+          <div style={subLabel}>{title}</div>
+          <Globe
+            ref={globeRef}
+            width={dims.width}
+            height={dims.height}
+            globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+            backgroundColor="rgba(0,0,0,0)"
+            showAtmosphere={false}
+            pointsData={[...data, ...(hatchData ?? [])]}
+            pointAltitude={0}
+            pointColor={d => d.color}
+            pointRadius={1}
+            pointsMerge={false}
+            pointTransitionDuration={0}
+          />
+          {renderLegend(legend)}
+        </div>
+      </div>
+    </div>
+  );
 
+  return (
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 6 }}>
       {isLoading && (
-        <div style={{ color: 'white', textAlign: 'center', marginTop: 20 }}>Loading globe data...</div>
+        <div style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', padding: '40px 0' }}>Loading globe data…</div>
       )}
       {!isLoading && error && (
-        <div style={{ color: '#ff6b6b', textAlign: 'center', marginTop: 20, padding: '0 16px' }}>{error}</div>
+        <div style={{ color: '#ff6b6b', textAlign: 'center', padding: '40px 16px' }}>{error}</div>
       )}
       {!isLoading && !error && (
-        <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', width: '100%', height: '100%' }}>
-          {renderGlobe(meanGlobeRef, pointsData.mean, meanLegend, 'Mean')}
-          {renderGlobe(stdGlobeRef, pointsData.std, stdLegend, 'Standard Deviation')}
+        <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: 8 }}>
+          {renderGlobe(meanContainerRef, meanGlobeRef, pointsData.mean, pointsData.hatch, meanLegend, `${fullTitle} (Mean)`, meanDims)}
+          {renderGlobe(stdContainerRef, stdGlobeRef, pointsData.std, null, stdLegend, `${fullTitle} (Standard Deviation)`, stdDims)}
         </div>
       )}
     </div>
