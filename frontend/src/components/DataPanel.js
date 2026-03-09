@@ -91,8 +91,6 @@ const DataPanel = ({
                     flex: '1 1 auto',
                     position: 'relative',
                     width: '100%',
-                    height: 'calc(100vh - 280px)',
-                    minHeight: 400,
                 }}
             >
                 {panel.feature ? (
