@@ -40,7 +40,7 @@ const DataPanel = ({
     const isAnnualMean = panel.month === 13;
     const currentFeatureLabel =
         featureOptions.find(f => f.value === panel.feature)?.label ?? panel.feature ?? '';
-    const fullTitle = `${currentFeatureLabel} ${isAnnualMean ? '(Annual Mean)' : 'in ' + monthNames[panel.month]}`;
+    const fullTitle = `${currentFeatureLabel} ${isAnnualMean ? 'Annual Mean' : 'in ' + monthNames[panel.month]}`;
 
     const handleMonthCommit = (val) => {
         setPanel(prev => ({ ...prev, month: val }));
