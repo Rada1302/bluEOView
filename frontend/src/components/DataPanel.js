@@ -1,13 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import {
-    Box,
-    Typography,
-    FormControl,
-    RadioGroup,
-    FormControlLabel,
-    Radio,
-    Slider as MuiSlider,
-} from '@mui/material';
+import React, { useEffect } from 'react';
+import { Box, Typography } from '@mui/material';
 import GlobeDisplay from './GlobeDisplay';
 import MapDisplay from './MapDisplay';
 import { monthNames } from '../constants';
@@ -26,31 +18,35 @@ const DataPanel = ({
     onSharedZoomChange,
     openInfoModal,
     featureOptions = [],
+    netcdfUrlInput,
+    setNetcdfUrlInput,
+    selectedDefault,
+    setSelectedDefault,
+    handleLoad,
+    featuresLoading,
+    featuresError,
+    DEFAULT_URLS,
 }) => {
-    const [localMonth, setLocalMonth] = useState(panel.month);
-
-    useEffect(() => {
-        setLocalMonth(panel.month);
-    }, [panel.month]);
-
+    // Keep feature in sync when featureOptions change
     useEffect(() => {
         if (!featureOptions.length) {
-            if (panel.feature !== null) {
-                setPanel(prev => ({ ...prev, feature: null }));
-            }
+            if (panel.feature !== null) setPanel(prev => ({ ...prev, feature: null }));
             return;
         }
         const exists = featureOptions.some(f => f.value === panel.feature);
-        if (!exists) {
-            setPanel(prev => ({ ...prev, feature: featureOptions[0].value }));
-        }
+        if (!exists) setPanel(prev => ({ ...prev, feature: featureOptions[0].value }));
     }, [featureOptions, panel.feature, setPanel]);
 
     const isAnnualMean = panel.month === 13;
     const currentFeatureLabel =
         featureOptions.find(f => f.value === panel.feature)?.label ?? panel.feature ?? '';
     const fullTitle = `${currentFeatureLabel} ${isAnnualMean ? '(Annual Mean)' : 'in ' + monthNames[panel.month]}`;
-    const lockTitle = isAnnualMean ? 'Annual Mean' : 'Month: ' + monthNames[panel.month];
+
+    const handleMonthCommit = (val) => {
+        setPanel(prev => ({ ...prev, month: val }));
+        debouncedUpdateMonth(val);
+        onMonthChange?.(val);
+    };
 
     return (
         <Box
@@ -64,59 +60,32 @@ const DataPanel = ({
                 zIndex: 'auto',
             }}
         >
-            {/* Feature Selector */}
-            <Box sx={{ flex: '0 0 auto', minWidth: 200, mb: 2 }}>
+            {/* Unified Control Panel */}
+            <Box sx={{ flex: '0 0 auto', mb: 2 }}>
                 <ControlPanel
+                    // Feature
                     feature={panel.feature}
                     featureOptions={featureOptions}
-                    onFeatureChange={(e) =>
-                        setPanel(prev => ({ ...prev, feature: e.target.value }))
-                    }
+                    onFeatureChange={(e) => setPanel(prev => ({ ...prev, feature: e.target.value }))}
                     openInfoModal={openInfoModal}
+                    month={panel.month}
+                    onMonthChange={handleMonthCommit}
+                    // View
+                    view={panel.view}
+                    onViewChange={(val) => setPanel(prev => ({ ...prev, view: val }))}
+                    // URL loader
+                    netcdfUrl={netcdfUrlInput}
+                    setNetcdfUrl={setNetcdfUrlInput}
+                    selectedDefault={selectedDefault}
+                    setSelectedDefault={setSelectedDefault}
+                    handleLoad={handleLoad}
+                    featuresLoading={featuresLoading}
+                    featuresError={featuresError}
+                    DEFAULT_URLS={DEFAULT_URLS}
                 />
             </Box>
 
-            {/* Month Slider + View Switch */}
-            <Box sx={{ flex: '0 0 auto', mb: 2, px: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, gap: 2 }}>
-                    <Typography color="white" variant="subtitle1">{lockTitle}</Typography>
-                    <FormControl component="fieldset">
-                        <RadioGroup
-                            row
-                            value={panel.view}
-                            onChange={(e) => setPanel(prev => ({ ...prev, view: e.target.value }))}
-                        >
-                            <FormControlLabel
-                                value="map"
-                                control={<Radio sx={{ color: 'white', '&.Mui-checked': { color: 'white' } }} />}
-                                label={<Typography color="white">Map</Typography>}
-                            />
-                            <FormControlLabel
-                                value="globe"
-                                control={<Radio sx={{ color: 'white', '&.Mui-checked': { color: 'white' } }} />}
-                                label={<Typography color="white">Globe</Typography>}
-                            />
-                        </RadioGroup>
-                    </FormControl>
-                </Box>
-
-                <MuiSlider
-                    min={1}
-                    max={13}
-                    value={localMonth}
-                    onChange={(e, v) => setLocalMonth(v)}
-                    onChangeCommitted={(e, v) => {
-                        setPanel(prev => ({ ...prev, month: v }));
-                        debouncedUpdateMonth(v);
-                        if (onMonthChange) onMonthChange(v);
-                    }}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={(v) => monthNames[v]}
-                    sx={{ color: '#1976d2' }}
-                />
-            </Box>
-
-            {/* Map or Globe — explicit height so children can use position:absolute */}
+            {/* Map / Globe display */}
             <Box
                 sx={{
                     flex: '1 1 auto',
@@ -130,7 +99,7 @@ const DataPanel = ({
                     <>
                         {panel.view === 'map' && (
                             <MapDisplay
-                                month={panel.month}
+                                month={debouncedMonth}
                                 feature={panel.feature}
                                 netcdfUrl={netcdfUrl}
                                 selectedArea={selectedArea}
@@ -145,7 +114,7 @@ const DataPanel = ({
                         )}
                         {panel.view === 'globe' && (
                             <GlobeDisplay
-                                month={panel.month}
+                                month={debouncedMonth}
                                 feature={panel.feature}
                                 netcdfUrl={netcdfUrl}
                                 fullTitle={fullTitle}

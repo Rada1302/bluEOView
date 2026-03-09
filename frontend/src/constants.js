@@ -97,6 +97,29 @@ export const monthNames = {
     13: "Annual Mean"
 }
 
+export const DEFAULT_URLS = [
+    {
+        label: "Default (Blueoview Diversity Dataset)",
+        value: "https://data.up.ethz.ch/shared/Blueoview_data/diversity_output.nc"
+    },
+];
+
+export const MONTH_OPTIONS = [
+    { value: 1, label: 'January' },
+    { value: 2, label: 'February' },
+    { value: 3, label: 'March' },
+    { value: 4, label: 'April' },
+    { value: 5, label: 'May' },
+    { value: 6, label: 'June' },
+    { value: 7, label: 'July' },
+    { value: 8, label: 'August' },
+    { value: 9, label: 'September' },
+    { value: 10, label: 'October' },
+    { value: 11, label: 'November' },
+    { value: 12, label: 'December' },
+    { value: 13, label: 'Annual Mean' },
+];
+
 export const BlueCloudLogo = {
     alt: 'Blue-Cloud',
     src: '/assets/BlueCloud_logo.png',
