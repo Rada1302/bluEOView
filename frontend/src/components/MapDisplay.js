@@ -15,7 +15,7 @@ const axisBase = {
 
 const MARGIN = { l: 20, r: 70, t: 50, b: 0 };
 
-const HatchOverlay = ({ uncertaintyMask, lats, lons, margin }) => {
+const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -34,43 +34,107 @@ const HatchOverlay = ({ uncertaintyMask, lats, lons, margin }) => {
     const nCols = uncertaintyMask[0]?.length ?? 0;
     if (!nRows || !nCols) return;
 
-    const cellW = plotW / nCols;
-    const cellH = plotH / nRows;
+    const lonMin = zoomedArea?.x?.[0] ?? lons[0];
+    const lonMax = zoomedArea?.x?.[1] ?? lons[lons.length - 1];
 
-    // Draw hatch pattern only over masked cells
+    const latAtTopPx = zoomedArea?.y?.[1] ?? lats[0];
+    const latAtBotPx = zoomedArea?.y?.[0] ?? lats[lats.length - 1];
+
+    const lonRange = lonMax - lonMin;
+    const latRange = latAtBotPx - latAtTopPx;
+
+    const lonToX = (lon) => margin.l + ((lon - lonMin) / lonRange) * plotW;
+    const latToY = (lat) => margin.t + ((lat - latAtTopPx) / latRange) * plotH;
+
+    const cellLonHalf = lons.length > 1 ? Math.abs(lons[1] - lons[0]) / 2 : 0;
+    const cellLatHalf = lats.length > 1 ? Math.abs(lats[1] - lats[0]) / 2 : 0;
+
+    const latViewMin = Math.min(latAtTopPx, latAtBotPx);
+    const latViewMax = Math.max(latAtTopPx, latAtBotPx);
+
     ctx.save();
     ctx.beginPath();
     for (let r = 0; r < nRows; r++) {
       for (let c = 0; c < nCols; c++) {
-        if (uncertaintyMask[r][c] === 1) {
-          const x = margin.l + c * cellW;
-          const y = margin.t + r * cellH;
-          ctx.rect(x, y, cellW, cellH);
-        }
+        if (uncertaintyMask[r][c] !== 1) continue;
+        const lon = lons[c];
+        const lat = lats[r];
+
+        // Cull cells fully outside the visible viewport
+        if (lon + cellLonHalf < lonMin || lon - cellLonHalf > lonMax) continue;
+        if (lat + cellLatHalf < latViewMin || lat - cellLatHalf > latViewMax) continue;
+
+        const x0 = lonToX(lon - cellLonHalf);
+        const x1 = lonToX(lon + cellLonHalf);
+        const yA = latToY(lat - cellLatHalf);
+        const yB = latToY(lat + cellLatHalf);
+        ctx.rect(Math.min(x0, x1), Math.min(yA, yB), Math.abs(x1 - x0), Math.abs(yB - yA));
       }
     }
     ctx.clip();
 
-    // Draw diagonal lines across the whole canvas (clipped to masked cells)
     ctx.strokeStyle = 'rgba(0,0,0,0.5)';
     ctx.lineWidth = 1.2;
     const step = 5;
-    for (let i = -(H); i < W + H; i += step) {
+    for (let i = -H; i < W + H; i += step) {
       ctx.beginPath();
       ctx.moveTo(i, 0);
       ctx.lineTo(i + H, H);
       ctx.stroke();
     }
     ctx.restore();
-  }, [uncertaintyMask, margin]);
+  }, [uncertaintyMask, lats, lons, margin, zoomedArea]);
 
   return (
     <canvas
       ref={canvasRef}
-      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3 }}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: 3,
+      }}
     />
   );
 };
+
+// Badge shown when the map is zoomed in
+const ZoomHint = ({ visible }) => (
+  <div
+    style={{
+      position: 'absolute',
+      bottom: 10,
+      left: '50%',
+      transform: `translateX(-50%) translateY(${visible ? 0 : 8}px)`,
+      opacity: visible ? 1 : 0,
+      transition: 'opacity 0.25s ease, transform 0.25s ease',
+      pointerEvents: 'none',
+      zIndex: 10,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: 'rgba(0,0,0,0.72)',
+      border: '1px solid rgba(255,255,255,0.22)',
+      borderRadius: 20,
+      padding: '5px 13px 5px 9px',
+      backdropFilter: 'blur(6px)',
+      whiteSpace: 'nowrap',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.45)',
+    }}
+  >
+    <svg width="14" height="20" viewBox="0 0 14 20" fill="none" style={{ flexShrink: 0 }}>
+      <rect x="1" y="1" width="12" height="18" rx="6" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" fill="none" />
+      <line x1="7" y1="1" x2="7" y2="8" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="7" cy="5" r="1.5" fill="white" />
+    </svg>
+    <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: 500, letterSpacing: '0.01em' }}>
+      Double-click to zoom out
+    </span>
+  </div>
+);
 
 const MapDisplay = ({
   month,
@@ -99,13 +163,12 @@ const MapDisplay = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Discrete colorscale: each color occupies an equal bin with hard edges
   const colorscale = useMemo(() => {
     const n = colors.length;
     const stops = [];
     colors.forEach((color, i) => {
       const pos = parseFloat((i / (n - 1)).toFixed(6));
-      if (i > 0) stops.push([pos, colors[i - 1]]); // hard left edge of bin
+      if (i > 0) stops.push([pos, colors[i - 1]]);
       stops.push([pos, color]);
     });
     return stops;
@@ -164,6 +227,8 @@ const MapDisplay = ({
     () => stdData.map(row => row.map(v => (v !== null && v > sdThreshold ? 1 : 0))),
     [stdData, sdThreshold]
   );
+
+  const isZoomed = zoomedArea != null;
 
   const colorbarBase = {
     tickcolor: 'white',
@@ -269,7 +334,6 @@ const MapDisplay = ({
                       colorbar: { ...colorbarBase, tickvals, ticktext },
                       hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>Mean: %{z}<extra></extra>',
                     },
-                    // hatch overlay rendered via SVG below
                   ]}
                   layout={sharedLayout}
                   useResizeHandler
@@ -284,8 +348,10 @@ const MapDisplay = ({
                     lats={lats}
                     lons={lons}
                     margin={MARGIN}
+                    zoomedArea={zoomedArea}
                   />
                 )}
+                <ZoomHint visible={isZoomed} />
               </div>
             </div>
           </div>
@@ -324,6 +390,7 @@ const MapDisplay = ({
                   onDoubleClick={() => onZoomedAreaChange?.(null)}
                   config={{ responsive: true, displayModeBar: false }}
                 />
+                <ZoomHint visible={isZoomed} />
               </div>
             </div>
           </div>
