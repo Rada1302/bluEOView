@@ -9,15 +9,6 @@ import {
 
 import { colors } from '../constants';
 
-const SD_COLORSCALE = [
-  [0, '#ffffff'],
-  [0.5, '#ffffff'],
-  [0.5, '#ff2222'],
-  [1.0, '#cc0000'],
-];
-
-const SD_STOPS = SD_COLORSCALE.map(([pos, color]) => [pos, color]);
-
 const SD_THRESHOLD = 50; // percent
 
 const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {

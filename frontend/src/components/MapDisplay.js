@@ -2,10 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Plot from 'react-plotly.js';
 import {
   colors,
-  mapGlobeTitleStyle,
-  STD_THRESHOLD,
 } from '../constants';
-import { generateColorStops, generateColorbarTicks } from '../utils';
+import { generateColorbarTicks } from '../utils';
 
 const axisBase = {
   showgrid: false,
