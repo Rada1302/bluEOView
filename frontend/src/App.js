@@ -157,7 +157,7 @@ const App = () => {
 
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <Typography variant="h1" sx={{ fontSize: '3.5rem', fontWeight: 'bold', color: 'white', lineHeight: 1, mt: 2 }}>
-            BluEOView
+            CephaloView
           </Typography>
           <Typography variant="h6" sx={{ fontSize: '1.25rem', color: 'white', mt: 0.5 }}>
             Visualisation of CEPHALOPOD
