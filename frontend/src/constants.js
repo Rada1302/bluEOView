@@ -54,9 +54,13 @@ export const monthNames = {
 
 export const DEFAULT_URLS = [
     {
-        label: "Default (Blueoview Diversity Dataset)",
+        label: "Diversity",
         value: "https://data.up.ethz.ch/shared/Blueoview_data/diversity_output_full.nc"
     },
+    {
+        label: "Species",
+        value: "https://data.up.ethz.ch/shared/Blueoview_data/species_output_full.nc"
+    }
 ];
 
 export const MONTH_OPTIONS = [
