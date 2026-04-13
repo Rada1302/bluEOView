@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Plot from 'react-plotly.js';
 import {
-  colors,
+  colors, EARTH_TEXTURE
 } from '../constants';
 import { generateColorbarTicks } from '../utils';
 
@@ -251,9 +251,24 @@ const MapDisplay = ({
     plot_bgcolor: 'rgba(0,0,0,0)',
     autosize: true,
     dragmode: 'zoom',
+
+    images: [
+      {
+        source: EARTH_TEXTURE,
+        xref: 'x',
+        yref: 'y',
+        x: -180,
+        y: -90,
+        sizex: 360,
+        sizey: 180,
+        sizing: 'stretch',
+        layer: 'below',
+      },
+    ],
+
     xaxis: {
       ...axisBase,
-      ...(zoomedArea?.x ? { range: zoomedArea.x, autorange: false } : { autorange: true }),
+      range: zoomedArea?.x ?? undefined,
     },
     yaxis: {
       ...axisBase,
@@ -326,6 +341,7 @@ const MapDisplay = ({
                       z: meanData,
                       x: lons,
                       y: lats,
+                      opacity: 0.7,
                       colorscale,
                       zauto: false,
                       zsmooth: false,

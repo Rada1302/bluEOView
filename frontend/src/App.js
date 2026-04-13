@@ -9,7 +9,6 @@ import { Box, Typography, Divider } from '@mui/material';
 import { BlueCloudLogo, DEFAULT_URLS } from './constants';
 import { Paper, Button } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import Tutorial from './components/Tutorial';
 
 const App = () => {
 
@@ -18,9 +17,6 @@ const App = () => {
     view: 'map',
     feature: null,
   };
-
-  const [tutorialActive, setTutorialActive] = useState(false);
-  const [tutorialStep, setTutorialStep] = useState(0);
 
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [infoModalShortText, setInfoModalShortText] = useState('');
@@ -111,12 +107,6 @@ const App = () => {
   return (
     <Box className="App" sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
-      <Tutorial
-        start={tutorialActive}
-        onFinish={() => { setTutorialActive(false); setTutorialStep(0); }}
-        setTutorialStep={setTutorialStep}
-      />
-
       {/* Header */}
       <Box
         component="header"
@@ -166,11 +156,6 @@ const App = () => {
 
         <Box><ReferencesButton /></Box>
 
-        <Box sx={{ position: 'absolute', top: '55%', right: 16 }}>
-          <Button variant="outlined" onClick={() => setTutorialActive(true)}>
-            Start Tutorial
-          </Button>
-        </Box>
       </Box>
 
       <Divider sx={{ bgcolor: 'rgba(255,255,255,0.3)', mt: 1, mb: 2 }} />

@@ -1,13 +1,12 @@
 import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import Globe from 'react-globe.gl';
-
 import {
   generateColorStops,
   getInterpolatedColorFromValue,
   getLegendFromColorscale
 } from '../utils';
 
-import { colors } from '../constants';
+import { colors, EARTH_TEXTURE } from '../constants';
 
 const SD_THRESHOLD = 50; // percent
 
@@ -188,7 +187,7 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
             ref={globeRef}
             width={dims.width}
             height={dims.height}
-            globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
+            globeImageUrl={EARTH_TEXTURE}
             backgroundColor="rgba(0,0,0,0)"
             showAtmosphere={false}
             pointsData={[...data, ...(hatchData ?? [])]}
