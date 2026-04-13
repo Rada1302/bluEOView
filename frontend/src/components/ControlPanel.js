@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   FormControl,
@@ -11,10 +11,13 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   TextField,
+  ListSubheader,
+  InputAdornment,
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import PublicIcon from '@mui/icons-material/Public';
 import MapIcon from '@mui/icons-material/Map';
+import SearchIcon from '@mui/icons-material/Search';
 import { MONTH_OPTIONS } from '../constants';
 
 const glassSelect = {
@@ -31,15 +34,18 @@ const glassSelect = {
 const menuProps = {
   PaperProps: {
     sx: {
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: 'rgba(30, 30, 30, 0.9)',
       backdropFilter: 'blur(10px)',
       border: '1px solid rgba(255,255,255,0.25)',
       boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+      maxHeight: 400,
       '& .MuiMenuItem-root': {
         color: '#fff',
         '&:hover': { backgroundColor: 'rgba(255,255,255,0.15)' },
         '&.Mui-selected': { backgroundColor: 'rgba(255,255,255,0.2)' },
       },
+      scrollbarWidth: 'thin',
+      scrollbarColor: 'rgba(255,255,255,0.3) transparent',
     },
   },
 };
@@ -134,7 +140,15 @@ const ControlPanel = ({
   netcdfUrl, setNetcdfUrl, selectedDefault, setSelectedDefault,
   handleLoad, featuresLoading, featuresError, DEFAULT_URLS = [],
 }) => {
+  const [searchTerm, setSearchTerm] = useState("");
   const featuresReady = featureOptions.length > 0 && feature != null;
+
+  // Sort alphabetically and Filter by search term
+  const displayedOptions = useMemo(() => {
+    return [...featureOptions]
+      .sort((a, b) => a.label.localeCompare(b.label))
+      .filter((opt) => opt.label.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [featureOptions, searchTerm]);
 
   return (
     <Box sx={{
@@ -194,7 +208,11 @@ const ControlPanel = ({
             <Select
               value={feature}
               onChange={onFeatureChange}
-              MenuProps={menuProps}
+              onClose={() => setSearchTerm("")}
+              MenuProps={{
+                ...menuProps,
+                autoFocus: false,
+              }}
               startAdornment={
                 <IconButton
                   size="small"
@@ -209,9 +227,45 @@ const ControlPanel = ({
                 </IconButton>
               }
             >
-              {featureOptions.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
-              ))}
+              {/* Search Header */}
+              <ListSubheader sx={{ bgcolor: 'rgb(45, 45, 45)', p: 1 }}>
+                <TextField
+                  size="small"
+                  autoFocus
+                  placeholder="Search name..."
+                  fullWidth
+                  value={searchTerm}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Escape') {
+                      // Prevents Select from closing when user presses Space
+                      e.stopPropagation();
+                    }
+                  }}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.5)' }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiInputBase-input': { color: '#fff', fontSize: '0.85rem' },
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
+                    '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.4)' },
+                  }}
+                />
+              </ListSubheader>
+
+              {displayedOptions.length > 0 ? (
+                displayedOptions.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </MenuItem>
+                ))
+              ) : (
+                <MenuItem disabled>No matches found</MenuItem>
+              )}
             </Select>
           </FormControl>
         ) : (

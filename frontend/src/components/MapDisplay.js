@@ -13,7 +13,7 @@ const axisBase = {
   showticklabels: false,
 };
 
-const MARGIN = { l: 20, r: 70, t: 50, b: 0 };
+const MARGIN = { l: 20, r: 70, t: 50, b: 20 };
 
 const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
   const canvasRef = useRef(null);
@@ -238,7 +238,7 @@ const MapDisplay = ({
     len: 0.84,
     lenmode: 'fraction',
     yanchor: 'top',
-    y: 1,
+    y: 0.9,
     xanchor: 'left',
     x: 1.01,
     outlinecolor: 'rgba(255,255,255,0.15)',
