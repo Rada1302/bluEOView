@@ -213,7 +213,7 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
       )}
       {!isLoading && !error && (
         <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: 8 }}>
-          {renderGlobe(meanContainerRef, meanGlobeRef, pointsData.mean, pointsData.hatch, meanLegend, `${fullTitle} (Mean)`, meanDims)}
+          {renderGlobe(meanContainerRef, meanGlobeRef, pointsData.mean, pointsData.hatch, meanLegend, `${fullTitle}`, meanDims)}
           {renderGlobe(stdContainerRef, stdGlobeRef, pointsData.std, null, stdLegend, `${fullTitle} (Standard Deviation)`, stdDims)}
         </div>
       )}

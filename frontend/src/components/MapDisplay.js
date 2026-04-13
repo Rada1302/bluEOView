@@ -333,7 +333,7 @@ const MapDisplay = ({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={aspectBox}>
               <div style={aspectInner}>
-                <div style={subLabel}>{fullTitle} (Mean)</div>
+                <div style={subLabel}>{fullTitle}</div>
                 <Plot
                   data={[
                     {
