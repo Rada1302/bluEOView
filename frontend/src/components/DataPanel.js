@@ -38,9 +38,10 @@ const DataPanel = ({
     }, [featureOptions, panel.feature, setPanel]);
 
     const isAnnualMean = panel.month === 13;
+    const isSpecies = netcdfUrl?.toLowerCase().includes('species');
     const currentFeatureLabel =
         featureOptions.find(f => f.value === panel.feature)?.label ?? panel.feature ?? '';
-    const titlePrefix = netcdfUrl?.toLowerCase().includes('species') ? 'Habitat Suitability Index ' : '';
+    const titlePrefix = isSpecies ? 'Habitat Suitability Index ' : '';
     const fullTitle = `${titlePrefix}${currentFeatureLabel} ${isAnnualMean ? 'Annual Mean' : 'in ' + monthNames[panel.month]}`;
 
     const handleMonthCommit = (val) => {

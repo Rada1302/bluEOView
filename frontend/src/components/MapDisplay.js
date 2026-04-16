@@ -146,6 +146,12 @@ const MapDisplay = ({
     typeof window !== 'undefined' ? window.innerWidth < 900 : false
   );
 
+  // Logic to determine if this is a species-specific file
+  const isSpecies = useMemo(() => {
+    const searchStr = (netcdfUrl || feature || "").toLowerCase();
+    return searchStr.includes('species');
+  }, [netcdfUrl, feature]);
+
   useEffect(() => {
     const handleResize = () => setIsVertical(window.innerWidth < 900);
     window.addEventListener('resize', handleResize);
@@ -155,11 +161,15 @@ const MapDisplay = ({
   const colorscale = useMemo(() => {
     const n = colors.length;
     const stops = [];
-    colors.forEach((color, i) => {
-      const pos = parseFloat((i / (n - 1)).toFixed(6));
-      if (i > 0) stops.push([pos, colors[i - 1]]);
-      stops.push([pos, color]);
-    });
+
+    for (let i = 0; i < n; i++) {
+      const start = i / n;
+      const end = (i + 1) / n;
+
+      stops.push([start, colors[i]]);
+      stops.push([end, colors[i]]);
+    }
+
     return stops;
   }, []);
 
@@ -199,10 +209,30 @@ const MapDisplay = ({
     return () => controller.abort();
   }, [month, feature, netcdfUrl]);
 
-  const { tickvals, ticktext } = useMemo(() => {
-    if (minValue == null || maxValue == null) return { tickvals: [], ticktext: [] };
-    return generateColorbarTicks(minValue, maxValue, colorscale.length);
-  }, [minValue, maxValue, colorscale]);
+  // Handle colorbar ticks and values
+  const { tickvals, ticktext, finalZMin, finalZMax } = useMemo(() => {
+    if (isSpecies) {
+      // Force 0.0 to 1.0 with 0.1 intervals
+      const vals = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+      return {
+        tickvals: vals,
+        ticktext: vals.map(v => v.toFixed(1)),
+        finalZMin: 0.0,
+        finalZMax: 1.0
+      };
+    }
+
+    if (minValue == null || maxValue == null) {
+      return { tickvals: [], ticktext: [], finalZMin: minValue, finalZMax: maxValue };
+    }
+
+    const ticks = generateColorbarTicks(minValue, maxValue, colorscale.length);
+    return {
+      ...ticks,
+      finalZMin: minValue,
+      finalZMax: maxValue
+    };
+  }, [isSpecies, minValue, maxValue, colorscale.length]);
 
   const sdThreshold = 50;
   const hasHighSD = useMemo(
@@ -214,7 +244,6 @@ const MapDisplay = ({
     [stdData]
   );
 
-  // Per-point hover text
   const meanHoverText = useMemo(
     () => meanData.map((row, ri) =>
       row.map((v, ci) => {
@@ -321,8 +350,8 @@ const MapDisplay = ({
                   opacity: 0.7,
                   colorscale,
                   zauto: false,
-                  zmin: minValue,
-                  zmax: maxValue,
+                  zmin: finalZMin,
+                  zmax: finalZMax,
                   colorbar: { ...colorbarBase, tickvals, ticktext },
                   text: meanHoverText,
                   hovertemplate: '%{text}<extra></extra>',
@@ -344,7 +373,6 @@ const MapDisplay = ({
               )}
               <ZoomHint visible={isZoomed} />
 
-              {/* Std Dev toggle button */}
               <button
                 onClick={() => setShowStd(v => !v)}
                 style={{
@@ -371,7 +399,7 @@ const MapDisplay = ({
           </div>
         </div>
 
-        {/* Std Dev Map -- conditionally rendered */}
+        {/* Std Dev Map */}
         {showStd && (
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={aspectBox}>
