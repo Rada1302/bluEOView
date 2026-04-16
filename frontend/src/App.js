@@ -13,7 +13,7 @@ import { alpha } from '@mui/material/styles';
 const App = () => {
 
   const initialPanel = {
-    month: 1,
+    month: 13,
     view: 'map',
     feature: null,
   };
