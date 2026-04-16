@@ -32,12 +32,13 @@ const App = () => {
   const [customUrls, setCustomUrls] = useState([]);
 
   const allUrls = useMemo(() => {
+    const uniqueCustoms = customUrls.filter(
+      (url) => !DEFAULT_URLS.some((def) => def.value === url)
+    );
+
     return [
       ...DEFAULT_URLS,
-      ...customUrls.map(url => ({
-        label: url,
-        value: url,
-      })),
+      ...uniqueCustoms.map(url => ({ label: url, value: url }))
     ];
   }, [customUrls]);
 
