@@ -25,7 +25,7 @@ const DataPanel = ({
     handleLoad,
     featuresLoading,
     featuresError,
-    DEFAULT_URLS,
+    allUrls,
 }) => {
     // Keep feature in sync when featureOptions change
     useEffect(() => {
@@ -81,7 +81,7 @@ const DataPanel = ({
                     handleLoad={handleLoad}
                     featuresLoading={featuresLoading}
                     featuresError={featuresError}
-                    DEFAULT_URLS={DEFAULT_URLS}
+                    allUrls={allUrls}
                 />
             </Box>
 

@@ -82,10 +82,10 @@ const RowLabel = ({ children }) => (
 const UrlControl = ({
   netcdfUrl, setNetcdfUrl,
   selectedDefault, setSelectedDefault,
-  handleLoad, featuresLoading, featuresError, featureOptions, DEFAULT_URLS,
+  handleLoad, featuresLoading, featuresError, featureOptions, allUrls,
 }) => {
   const [editing, setEditing] = useState(false);
-  const isCustomUrl = !!netcdfUrl && !DEFAULT_URLS.find(u => u.value === netcdfUrl);
+  const isCustomUrl = !!netcdfUrl && !allUrls.find(u => u.value === netcdfUrl);
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
@@ -112,10 +112,20 @@ const UrlControl = ({
           <Select
             value={isCustomUrl ? '__custom__' : (selectedDefault || '')}
             displayEmpty
-            renderValue={() => {
-              if (isCustomUrl) return <span style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>{netcdfUrl}</span>;
-              const found = DEFAULT_URLS.find(u => u.value === selectedDefault);
-              return found?.label ?? '';
+            renderValue={(value) => {
+              if (!value) return '';
+
+              const found = allUrls.find(u => u.value === value);
+
+              if (found && found.label !== found.value) {
+                return found.label;
+              }
+
+              return (
+                <span style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>
+                  {value}
+                </span>
+              );
             }}
             onChange={(e) => {
               const val = e.target.value;
@@ -124,7 +134,7 @@ const UrlControl = ({
             }}
             MenuProps={menuProps}
           >
-            {DEFAULT_URLS.map(opt => (
+            {allUrls.map(opt => (
               <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
             ))}
             {isCustomUrl && (
@@ -170,7 +180,7 @@ const ControlPanel = ({
   month, onMonthChange,
   view, onViewChange,
   netcdfUrl, setNetcdfUrl, selectedDefault, setSelectedDefault,
-  handleLoad, featuresLoading, featuresError, DEFAULT_URLS = [],
+  handleLoad, featuresLoading, featuresError, allUrls = [],
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(true);
@@ -246,7 +256,7 @@ const ControlPanel = ({
               selectedDefault={selectedDefault} setSelectedDefault={setSelectedDefault}
               handleLoad={handleLoad} featuresLoading={featuresLoading}
               featuresError={featuresError} featureOptions={featureOptions}
-              DEFAULT_URLS={DEFAULT_URLS}
+              allUrls={allUrls}
             />
           </Box>
 

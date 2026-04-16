@@ -29,6 +29,17 @@ const App = () => {
   const [netcdfUrlInput, setNetcdfUrlInput] = useState(DEFAULT_URLS[0].value);
   const [loadedUrl, setLoadedUrl] = useState(DEFAULT_URLS[0].value);
   const [selectedDefault, setSelectedDefault] = useState(DEFAULT_URLS[0].value);
+  const [customUrls, setCustomUrls] = useState([]);
+
+  const allUrls = useMemo(() => {
+    return [
+      ...DEFAULT_URLS,
+      ...customUrls.map(url => ({
+        label: url,
+        value: url,
+      })),
+    ];
+  }, [customUrls]);
 
   const [featureOptions, setFeatureOptions] = useState([]);
   const [featuresLoading, setFeaturesLoading] = useState(false);
@@ -99,9 +110,16 @@ const App = () => {
   const handleLoad = () => {
     const trimmed = netcdfUrlInput.trim();
     if (!trimmed) return;
+
     setLoadedUrl(trimmed);
+
     const matchingDefault = DEFAULT_URLS.find(u => u.value === trimmed);
     setSelectedDefault(matchingDefault?.value ?? '');
+
+    setCustomUrls(prev => {
+      if (prev.includes(trimmed)) return prev;
+      return [trimmed, ...prev];
+    });
   };
 
   return (
@@ -196,7 +214,7 @@ const App = () => {
             handleLoad={handleLoad}
             featuresLoading={featuresLoading}
             featuresError={featuresError}
-            DEFAULT_URLS={DEFAULT_URLS}
+            allUrls={allUrls}
           />
         </Box>
       </Box>
