@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Box, Alert, Typography } from '@mui/material';
+import { Box, Alert, Typography, CircularProgress } from '@mui/material';
 import GlobeDisplay from './GlobeDisplay';
 import MapDisplay from './MapDisplay';
 import { monthNames } from '../constants';
@@ -61,19 +61,16 @@ const DataPanel = ({
             }}
         >
             {/* Unified Control Panel */}
-            <Box sx={{ flex: '0 0 auto', mb: 2 }}>
+            <Box sx={{ flex: '0 0 auto', mb: 2, alignItems: 'center' }}>
                 <ControlPanel
-                    // Feature
                     feature={panel.feature}
                     featureOptions={featureOptions}
                     onFeatureChange={(e) => setPanel(prev => ({ ...prev, feature: e.target.value }))}
                     openInfoModal={openInfoModal}
                     month={panel.month}
                     onMonthChange={handleMonthCommit}
-                    // View
                     view={panel.view}
                     onViewChange={(val) => setPanel(prev => ({ ...prev, view: val }))}
-                    // URL loader
                     netcdfUrl={netcdfUrlInput}
                     setNetcdfUrl={setNetcdfUrlInput}
                     selectedDefault={selectedDefault}
@@ -91,6 +88,9 @@ const DataPanel = ({
                     flex: '1 1 auto',
                     position: 'relative',
                     width: '100%',
+                    minHeight: '400px', // Ensures the container doesn't collapse during loading
+                    display: 'flex',
+                    flexDirection: 'column'
                 }}
             >
                 {panel.feature ? (
@@ -121,12 +121,34 @@ const DataPanel = ({
                         )}
                     </>
                 ) : (
-                    <Box sx={{ mt: 5, mb: 5, display: 'flex', justifyContent: 'center' }}>
-                        <Alert
-                            severity="error"
-                        >
-                            File not found or not in the correct format: No valid features available in this dataset.
-                        </Alert>
+                    <Box
+                        sx={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            textAlign: 'center',
+                            p: 3
+                        }}
+                    >
+                        {featuresLoading ? (
+                            /* Priority 1: Show loading spinner if currently fetching */
+                            <>
+                                <CircularProgress color="primary" sx={{ mb: 2 }} />
+                                <Typography variant="h6" color="text.secondary">
+                                    Loading dataset features...
+                                </Typography>
+                            </>
+                        ) : (
+                            /* Priority 2: Show error only if loading is finished and no feature is selected */
+                            <Alert
+                                severity="error"
+                                sx={{ maxWidth: '600px' }}
+                            >
+                                {"File not found or not in the correct format: No valid features available in this dataset."}
+                            </Alert>
+                        )}
                     </Box>
                 )}
             </Box>
