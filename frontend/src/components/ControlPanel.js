@@ -212,7 +212,6 @@ const ControlPanel = ({
 
       {/* Collapsible header */}
       <Box
-        onClick={() => setOpen(v => !v)}
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -223,7 +222,8 @@ const ControlPanel = ({
           '&:hover': { backgroundColor: 'rgba(255,255,255,0.04)' },
         }}
       >
-        <IconButton sx={{ color: 'white', pr: 3 }}>
+        <IconButton onClick={() => setOpen(v => !v)}
+          sx={{ color: 'white', pr: 3 }}>
           {open ? <ExpandLessIcon /> : <ExpandMoreIcon />}
         </IconButton>
         <Typography sx={{ fontSize: 19 }}>
