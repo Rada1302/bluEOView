@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Plot from 'react-plotly.js';
 import {
-  colors, EARTH_TEXTURE
+  colors,
+  EARTH_TEXTURE,
+  SD_COLORSCALE
 } from '../constants';
 import { generateColorbarTicks } from '../utils';
 
@@ -139,6 +141,7 @@ const MapDisplay = ({
   const [maxValue, setMaxValue] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showStd, setShowStd] = useState(false);
   const [isVertical, setIsVertical] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 900 : false
   );
@@ -293,7 +296,7 @@ const MapDisplay = ({
   const aspectInner = {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(18,18,18,0.8)', borderRadius: 6, overflow: 'hidden',
-    cursor: loading ? 'wait' : 'default'
+    cursor: loading ? 'wait' : 'default',
   };
   const subLabel = {
     position: 'absolute', top: 10, left: 0, width: '100%',
@@ -340,41 +343,67 @@ const MapDisplay = ({
                 <HatchOverlay uncertaintyMask={uncertaintyMask} lats={lats} lons={lons} margin={MARGIN} zoomedArea={zoomedArea} />
               )}
               <ZoomHint visible={isZoomed} />
+
+              {/* Std Dev toggle button */}
+              <button
+                onClick={() => setShowStd(v => !v)}
+                style={{
+                  position: 'absolute',
+                  top: 10,
+                  right: 10,
+                  zIndex: 10,
+                  padding: '4px 10px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  borderRadius: 4,
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  backgroundColor: 'rgba(30,30,30,0.75)',
+                  color: 'white',
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(4px)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {showStd ? '✕ Hide SD' : '+ Show SD'}
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Std Dev Map */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={aspectBox}>
-            <div style={aspectInner}>
-              <div style={subLabel}>{fullTitle} (Standard Deviation)</div>
-              <Plot
-                data={stdData.length ? [{
-                  type: 'heatmap',
-                  z: stdData,
-                  x: lons,
-                  y: lats,
-                  colorscale: [[0, '#ffffff'], [0.5, '#ffffff'], [0.5, '#ff2222'], [1.0, '#cc0000']],
-                  zmin: 0, zmax: 100,
-                  colorbar: {
-                    ...colorbarBase,
-                    tickvals: [0, 25, 50, 75, 100],
-                    ticktext: ['0%', '25%', '50%', '75%', '100%'],
-                  },
-                  hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>SD: %{z}%<extra></extra>',
-                }] : []}
-                layout={sharedLayout}
-                useResizeHandler
-                style={{ width: '100%', height: '100%' }}
-                onRelayout={handleRelayout}
-                onDoubleClick={() => onZoomedAreaChange?.(null)}
-                config={{ responsive: true, displayModeBar: false }}
-              />
-              <ZoomHint visible={isZoomed} />
+        {/* Std Dev Map -- conditionally rendered */}
+        {showStd && (
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={aspectBox}>
+              <div style={aspectInner}>
+                <div style={subLabel}>{fullTitle} (Standard Deviation)</div>
+                <Plot
+                  data={stdData.length ? [{
+                    type: 'heatmap',
+                    z: stdData,
+                    x: lons,
+                    y: lats,
+                    colorscale: SD_COLORSCALE,
+                    zmin: 0, zmax: 100,
+                    colorbar: {
+                      ...colorbarBase,
+                      tickvals: [0, 10, 25, 40, 50, 60, 75, 90, 100],
+                      ticktext: ['0%', '10%', '25%', '40%', '50%', '60%', '75%', '90%', '100%'],
+                    },
+                    hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>SD: %{z}%<extra></extra>',
+                  }] : []}
+                  layout={sharedLayout}
+                  useResizeHandler
+                  style={{ width: '100%', height: '100%' }}
+                  onRelayout={handleRelayout}
+                  onDoubleClick={() => onZoomedAreaChange?.(null)}
+                  config={{ responsive: true, displayModeBar: false }}
+                />
+                <ZoomHint visible={isZoomed} />
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {error && <div style={{ color: '#ff6b6b', textAlign: 'center' }}>{error}</div>}

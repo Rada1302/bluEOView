@@ -22,6 +22,19 @@ export const colors = [
     '#fde725'
 ];
 
+// SD Colorscale
+export const SD_COLORSCALE = [
+    [0.00, '#ffffff'],
+    [0.10, '#fff5cc'],
+    [0.25, '#ffe066'],
+    [0.40, '#ffb347'],
+    [0.50, '#ff7e00'],
+    [0.60, '#ff3c00'],
+    [0.75, '#cc1100'],
+    [0.90, '#7a0000'],
+    [1.00, '#3d0000'],
+];
+
 export const containerStyle = {
     width: '100%',
     height: '100%',
