@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Alert, Typography } from '@mui/material';
 import GlobeDisplay from './GlobeDisplay';
 import MapDisplay from './MapDisplay';
 import { monthNames } from '../constants';
@@ -121,9 +121,13 @@ const DataPanel = ({
                         )}
                     </>
                 ) : (
-                    <Typography color="white" sx={{ textAlign: 'center', mt: 5 }}>
-                        No valid features available in this dataset.
-                    </Typography>
+                    <Box sx={{ mt: 5, mb: 5, display: 'flex', justifyContent: 'center' }}>
+                        <Alert
+                            severity="error"
+                        >
+                            File not found or not in the correct format: No valid features available in this dataset.
+                        </Alert>
+                    </Box>
                 )}
             </Box>
         </Box>
