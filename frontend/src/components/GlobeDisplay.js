@@ -8,7 +8,7 @@ import {
 
 import { colors, EARTH_TEXTURE } from '../constants';
 
-const SD_THRESHOLD = 50; // percent
+const SD_THRESHOLD = 50;
 
 const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
   const meanContainerRef = useRef(null);
@@ -18,14 +18,12 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
 
   const [meanDims, setMeanDims] = useState({ width: 0, height: 0 });
   const [stdDims, setStdDims] = useState({ width: 0, height: 0 });
-  const [pointsData, setPointsData] = useState({ mean: [], std: [], hatch: [] });
+  const [pointsData, setPointsData] = useState({ mean: [], std: [] });
   const [minValue, setMinValue] = useState(null);
   const [maxValue, setMaxValue] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isVertical, setIsVertical] = useState(
-    typeof window !== 'undefined' ? window.innerWidth < 900 : false
-  );
+  const [isVertical, setIsVertical] = useState(typeof window !== 'undefined' ? window.innerWidth < 900 : false);
 
   const cacheRef = useRef({});
   const colorscale = useMemo(() => generateColorStops(colors), []);
@@ -34,12 +32,16 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
     const measure = () => {
       setIsVertical(window.innerWidth < 900);
       if (meanContainerRef.current) {
-        const { offsetWidth, offsetHeight } = meanContainerRef.current;
-        setMeanDims({ width: offsetWidth, height: offsetHeight });
+        setMeanDims({
+          width: meanContainerRef.current.offsetWidth,
+          height: meanContainerRef.current.offsetHeight
+        });
       }
       if (stdContainerRef.current) {
-        const { offsetWidth, offsetHeight } = stdContainerRef.current;
-        setStdDims({ width: offsetWidth, height: offsetHeight });
+        setStdDims({
+          width: stdContainerRef.current.offsetWidth,
+          height: stdContainerRef.current.offsetHeight
+        });
       }
     };
     measure();
@@ -49,19 +51,17 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
 
   const fetchData = useCallback(async (month, feature, signal) => {
     if (!feature || !netcdfUrl) return;
-
     const cacheKey = `${month}_${feature}_${netcdfUrl}`;
     if (cacheRef.current[cacheKey]) {
       const c = cacheRef.current[cacheKey];
       setPointsData(c.pointsData);
       setMinValue(c.minValue);
       setMaxValue(c.maxValue);
+      setError(null);
       return;
     }
 
     setIsLoading(true);
-    setError(null);
-
     try {
       const params = new URLSearchParams({ feature, timeIndex: month.toString(), file: netcdfUrl });
       const res = await fetch(`/api/diversity-map?${params}`, { signal });
@@ -70,12 +70,9 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
 
       const { lats, lons, mean, sd, minValue: minVal, maxValue: maxVal, sdMax } = json;
 
-      if (!lats?.length || !lons?.length || !mean?.length) throw new Error('API returned empty data');
-
-      const step = 2;
+      const step = 3;
       const meanPoints = [];
       const stdPoints = [];
-      const hatchPoints = []; // dark dots over high-SD cells on the mean globe
 
       for (let li = 0; li < lats.length; li += step) {
         const lat = lats[li];
@@ -89,43 +86,34 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
 
           meanPoints.push({
             lat, lng: lon,
-            color: getInterpolatedColorFromValue(meanVal, minVal, maxVal, colorscale),
+            val: meanVal,
+            isUncertain: (sdMax > 0 && (sdVal / sdMax) * 100 > SD_THRESHOLD)
           });
 
           if (sdVal !== null && sdVal !== undefined) {
-            // sdVal is raw, normalize to 0–100% using sdMax
             const sdPct = sdMax > 0 ? (sdVal / sdMax) * 100 : 0;
-
-            // SD globe: white below 50%, red above
             stdPoints.push({
               lat, lng: lon,
               color: sdPct <= 50 ? '#ffffff' : '#ff2222',
             });
-
-            if (sdPct > SD_THRESHOLD) {
-              hatchPoints.push({ lat, lng: lon, color: 'rgba(0,0,0,0.55)' });
-            }
           }
         }
       }
 
-      const transformed = { mean: meanPoints, std: stdPoints, hatch: hatchPoints };
+      const transformed = { mean: meanPoints, std: stdPoints };
       cacheRef.current[cacheKey] = { pointsData: transformed, minValue: minVal, maxValue: maxVal };
       setPointsData(transformed);
       setMinValue(minVal);
       setMaxValue(maxVal);
       setError(null);
-
     } catch (err) {
-      if (err.name === 'AbortError') return;
-      setError(err.message ?? 'Failed to load data');
+      if (err.name !== 'AbortError') setError(err.message);
     } finally {
       setIsLoading(false);
     }
   }, [netcdfUrl, colorscale]);
 
   useEffect(() => {
-    if (!netcdfUrl || !feature) return;
     const controller = new AbortController();
     fetchData(month, feature, controller.signal);
     return () => controller.abort();
@@ -170,7 +158,7 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
   const aspectBox = { position: 'relative', width: '100%', paddingTop: '56.25%' };
   const aspectInner = {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(18,18,18,0.6)', borderRadius: 6, overflow: 'hidden',
+    backgroundColor: '#0a0a0a', borderRadius: 6, overflow: 'hidden',
   };
   const subLabel = {
     position: 'absolute', top: 10, left: 0, width: '100%',
@@ -178,11 +166,13 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
     pointerEvents: 'none', zIndex: 5,
   };
 
-  const renderGlobe = (containerRef, globeRef, data, hatchData, legend, title, dims) => (
+  const renderGlobe = (containerRef, globeRef, data, isMean, legend, title, dims) => (
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={aspectBox}>
-        <div ref={containerRef} style={aspectInner}>
+        <div ref={containerRef} style={{ ...aspectInner, cursor: isLoading ? 'wait' : 'default' }}>
+          {/* THE MISSING TITLE */}
           <div style={subLabel}>{title}</div>
+
           <Globe
             ref={globeRef}
             width={dims.width}
@@ -190,11 +180,14 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
             globeImageUrl={EARTH_TEXTURE}
             backgroundColor="rgba(0,0,0,0)"
             showAtmosphere={false}
-            pointsData={[...data, ...(hatchData ?? [])]}
-            pointAltitude={0}
-            pointColor={d => d.color}
-            pointRadius={1}
-            pointsMerge={false}
+            pointsData={data}
+            pointColor={d => isMean
+              ? (d.isUncertain ? 'rgba(0,0,0,0.6)' : getInterpolatedColorFromValue(d.val, minValue, maxValue, colorscale))
+              : d.color
+            }
+            pointRadius={1.2}
+            pointAltitude={0.005}
+            pointsMerge={true}
             pointTransitionDuration={0}
           />
           {renderLegend(legend)}
@@ -204,19 +197,12 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
   );
 
   return (
-    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {isLoading && (
-        <div style={{ color: 'rgba(255,255,255,0.6)', textAlign: 'center', padding: '40px 0' }}>Loading globe data…</div>
-      )}
-      {!isLoading && error && (
-        <div style={{ color: '#ff6b6b', textAlign: 'center', padding: '40px 16px' }}>{error}</div>
-      )}
-      {!isLoading && !error && (
-        <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: 8 }}>
-          {renderGlobe(meanContainerRef, meanGlobeRef, pointsData.mean, pointsData.hatch, meanLegend, `${fullTitle}`, meanDims)}
-          {renderGlobe(stdContainerRef, stdGlobeRef, pointsData.std, null, stdLegend, `${fullTitle} (Standard Deviation)`, stdDims)}
-        </div>
-      )}
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: 8 }}>
+        {renderGlobe(meanContainerRef, meanGlobeRef, pointsData.mean, true, meanLegend, fullTitle, meanDims)}
+        {renderGlobe(stdContainerRef, stdGlobeRef, pointsData.std, false, stdLegend, `${fullTitle} (Standard Deviation)`, stdDims)}
+      </div>
+      {error && <div style={{ color: '#ff6b6b', textAlign: 'center', padding: '10px' }}>{error}</div>}
     </div>
   );
 };

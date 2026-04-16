@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   FormControl,
@@ -114,18 +114,9 @@ const UrlControl = ({
             displayEmpty
             renderValue={(value) => {
               if (!value) return '';
-
               const found = allUrls.find(u => u.value === value);
-
-              if (found && found.label !== found.value) {
-                return found.label;
-              }
-
-              return (
-                <span style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>
-                  {value}
-                </span>
-              );
+              if (found && found.label !== found.value) return found.label;
+              return <span style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>{value}</span>;
             }}
             onChange={(e) => {
               const val = e.target.value;
@@ -184,6 +175,15 @@ const ControlPanel = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(true);
+
+  // Local state for the slider to prevent intermediate API calls while dragging
+  const [localMonth, setLocalMonth] = useState(month);
+
+  // Sync local slider when month changes from external source (e.g. initial load)
+  useEffect(() => {
+    setLocalMonth(month);
+  }, [month]);
+
   const featuresReady = featureOptions.length > 0 && feature != null;
 
   const displayedOptions = useMemo(() => {
@@ -192,13 +192,12 @@ const ControlPanel = ({
       .filter((opt) => opt.label.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [featureOptions, searchTerm]);
 
-  // Build marks for the slider from MONTH_OPTIONS
   const sliderMarks = MONTH_OPTIONS.map(opt => ({
     value: opt.value,
     label: opt.label.slice(0, 3),
   }));
 
-  const currentMonthLabel = MONTH_OPTIONS.find(o => o.value === month)?.label ?? '';
+  const currentMonthLabel = MONTH_OPTIONS.find(o => o.value === localMonth)?.label ?? '';
 
   return (
     <Box sx={{
@@ -210,7 +209,6 @@ const ControlPanel = ({
       overflow: 'hidden',
     }}>
 
-      {/* Collapsible header */}
       <Box
         sx={{
           display: 'flex',
@@ -248,7 +246,6 @@ const ControlPanel = ({
       <Collapse in={open}>
         <Box sx={{ px: 2, py: 1.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
 
-          {/* Row 1: Source */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <RowLabel>Source</RowLabel>
             <UrlControl
@@ -260,7 +257,6 @@ const ControlPanel = ({
             />
           </Box>
 
-          {/* Row 2: Variable */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <RowLabel>Variable</RowLabel>
             {featuresReady ? (
@@ -326,18 +322,19 @@ const ControlPanel = ({
             )}
           </Box>
 
-
-          {/* Row 3: Time Frame */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <RowLabel>Time Frame</RowLabel>
             <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
               <Slider
-                value={month ?? 1}
+                value={localMonth ?? 1}
                 min={1}
                 max={13}
                 step={1}
                 marks={sliderMarks}
-                onChange={(_, val) => onMonthChange?.(val)}
+                // Update UI immediately while dragging
+                onChange={(_, val) => setLocalMonth(val)}
+                // Only trigger the actual data change when the user lets go
+                onChangeCommitted={(_, val) => onMonthChange?.(val)}
                 sx={{
                   flex: 1,
                   color: '#fff',
