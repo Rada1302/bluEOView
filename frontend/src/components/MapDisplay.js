@@ -211,6 +211,37 @@ const MapDisplay = ({
     [stdData]
   );
 
+  // Per-point hover text
+  const meanHoverText = useMemo(
+    () => meanData.map((row, ri) =>
+      row.map((v, ci) => {
+        const isUnknown = v === null || (typeof v === 'number' && isNaN(v));
+        const valStr = isUnknown ? 'Unknown' : (typeof v === 'number' ? v.toFixed(3) : v);
+        const highSD = uncertaintyMask[ri]?.[ci] === 1;
+        return `Lon: ${lons[ci]}<br>Lat: ${lats[ri]}<br>Value: ${valStr}${highSD ? '<br>⚠ High uncertainty' : ''}`;
+      })
+    ),
+    [meanData, uncertaintyMask, lats, lons]
+  );
+
+  const meanHoverBgColor = useMemo(
+    () => meanData.map((row, ri) =>
+      row.map((_, ci) =>
+        uncertaintyMask[ri]?.[ci] === 1 ? 'rgba(160,0,0,0.9)' : 'rgba(30,30,30,0.85)'
+      )
+    ),
+    [meanData, uncertaintyMask]
+  );
+
+  const meanHoverBorderColor = useMemo(
+    () => meanData.map((row, ri) =>
+      row.map((_, ci) =>
+        uncertaintyMask[ri]?.[ci] === 1 ? '#ff2222' : 'rgba(255,255,255,0.2)'
+      )
+    ),
+    [meanData, uncertaintyMask]
+  );
+
   const isZoomed = zoomedArea != null;
 
   const colorbarBase = {
@@ -262,7 +293,7 @@ const MapDisplay = ({
   const aspectInner = {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(18,18,18,0.8)', borderRadius: 6, overflow: 'hidden',
-    cursor: loading ? 'wait' : 'default' // Subtle UX hint
+    cursor: loading ? 'wait' : 'default'
   };
   const subLabel = {
     position: 'absolute', top: 10, left: 0, width: '100%',
@@ -290,7 +321,13 @@ const MapDisplay = ({
                   zmin: minValue,
                   zmax: maxValue,
                   colorbar: { ...colorbarBase, tickvals, ticktext },
-                  hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>Value: %{z}<extra></extra>',
+                  text: meanHoverText,
+                  hovertemplate: '%{text}<extra></extra>',
+                  hoverlabel: {
+                    bgcolor: meanHoverBgColor,
+                    bordercolor: meanHoverBorderColor,
+                    font: { color: 'white', size: 12 },
+                  },
                 }] : []}
                 layout={sharedLayout}
                 useResizeHandler
