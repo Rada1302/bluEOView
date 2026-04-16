@@ -170,7 +170,7 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={aspectBox}>
         <div ref={containerRef} style={{ ...aspectInner, cursor: isLoading ? 'wait' : 'default' }}>
-          {/* THE MISSING TITLE */}
+          {/* Title */}
           <div style={subLabel}>{title}</div>
 
           <Globe
@@ -179,7 +179,6 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
             height={dims.height}
             globeImageUrl={EARTH_TEXTURE}
             backgroundColor="rgba(0,0,0,0)"
-            showAtmosphere={false}
             pointsData={data}
             pointColor={d => isMean
               ? (d.isUncertain ? 'rgba(0,0,0,0.6)' : getInterpolatedColorFromValue(d.val, minValue, maxValue, colorscale))
