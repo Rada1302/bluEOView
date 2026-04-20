@@ -1,6 +1,6 @@
-# Marine Plankton Diversity Bioindicator Scenarios for Policy MAKERs
+# Visualisation Tool for CEPHALOPOD
 
-This web application provides interactive visualizations of marine plankton diversity using a Flask backend with a React-based frontend. The application includes a globe visualization, a flat map, a line plot for trends, and various filters for indices, plankton groups, climate scenarios, and models.
+This web application provides interactive visualizations of CEPHALOPOD using a Flask backend with a React-based frontend. The application includes a globe visualization, a flat map for the diversity and species distribution output of [CEPHALOPOD] (https://github.com/alexschickele/CEPHALOPOD).
 
 ## Table of Contents
 
