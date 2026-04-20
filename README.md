@@ -1,6 +1,6 @@
-# Visualisation Tool for CEPHALOPOD
+# Visualisation Tool for  [CEPHALOPOD](https://github.com/alexschickele/CEPHALOPOD)
 
-This web application provides interactive visualizations of CEPHALOPOD using a Flask backend with a React-based frontend. The application includes a globe visualization, a flat map for the diversity and species distribution output of [CEPHALOPOD] (https://github.com/alexschickele/CEPHALOPOD).
+This web application provides interactive visualizations of CEPHALOPOD using a Flask backend with a React-based frontend. The application includes a globe visualization, a flat map for the diversity and species distribution output of [CEPHALOPOD](https://github.com/alexschickele/CEPHALOPOD).
 
 ## Table of Contents
 
