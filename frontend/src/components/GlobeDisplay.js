@@ -6,11 +6,63 @@ import {
   getLegendFromColorscale
 } from '../utils';
 
-import { colors, EARTH_TEXTURE } from '../constants';
+import { colors, EARTH_TEXTURE, SD_COLORSCALE } from '../constants';
 
 const SD_THRESHOLD = 50;
 
-const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
+const interpolateSdColor = (() => {
+  const parseHex = (hex) => {
+    const h = hex.replace('#', '');
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  };
+  return (pct) => {
+    const t = Math.max(0, Math.min(100, pct)) / 100;
+    let lo = SD_COLORSCALE[0];
+    let hi = SD_COLORSCALE[SD_COLORSCALE.length - 1];
+    for (let i = 0; i < SD_COLORSCALE.length - 1; i++) {
+      if (t >= SD_COLORSCALE[i][0] && t <= SD_COLORSCALE[i + 1][0]) {
+        lo = SD_COLORSCALE[i];
+        hi = SD_COLORSCALE[i + 1];
+        break;
+      }
+    }
+    const range = hi[0] - lo[0];
+    const f = range === 0 ? 0 : (t - lo[0]) / range;
+    const [r0, g0, b0] = parseHex(lo[1]);
+    const [r1, g1, b1] = parseHex(hi[1]);
+    const r = Math.round(r0 + (r1 - r0) * f);
+    const g = Math.round(g0 + (g1 - g0) * f);
+    const b = Math.round(b0 + (b1 - b0) * f);
+    return `rgb(${r},${g},${b})`;
+  };
+})();
+
+const ToggleStdButton = ({ showStd, onToggle }) => (
+  <button
+    onClick={onToggle}
+    style={{
+      position: 'absolute',
+      top: 10,
+      right: 10,
+      zIndex: 10,
+      padding: '4px 10px',
+      fontSize: 11,
+      fontWeight: 600,
+      letterSpacing: '0.04em',
+      borderRadius: 4,
+      border: '1px solid rgba(255,255,255,0.25)',
+      backgroundColor: 'rgba(30,30,30,0.75)',
+      color: 'white',
+      cursor: 'pointer',
+      backdropFilter: 'blur(4px)',
+      transition: 'all 0.2s ease',
+    }}
+  >
+    {showStd ? '✕ Hide SD' : '+ Show SD'}
+  </button>
+);
+
+const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleStd }) => {
   const meanContainerRef = useRef(null);
   const stdContainerRef = useRef(null);
   const meanGlobeRef = useRef();
@@ -84,17 +136,19 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
 
           if (meanVal === null || meanVal === undefined) continue;
 
+          const sdPct = (sdMax > 0 && sdVal != null) ? (sdVal / sdMax) * 100 : 0;
+
           meanPoints.push({
             lat, lng: lon,
             val: meanVal,
-            isUncertain: (sdMax > 0 && (sdVal / sdMax) * 100 > SD_THRESHOLD)
+            isUncertain: sdPct > SD_THRESHOLD,
           });
 
           if (sdVal !== null && sdVal !== undefined) {
-            const sdPct = sdMax > 0 ? (sdVal / sdMax) * 100 : 0;
             stdPoints.push({
               lat, lng: lon,
-              color: sdPct <= 50 ? '#ffffff' : '#ff2222',
+              sdPct,
+              color: interpolateSdColor(sdPct),
             });
           }
         }
@@ -124,10 +178,14 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
       : getLegendFromColorscale(colorscale, minValue, maxValue)
   ), [minValue, maxValue, colorscale]);
 
-  const stdLegend = useMemo(() => ({
-    colors: ['#ffffff', '#ff2222'],
-    labels: ['0%', '50%', '100%'],
-  }), []);
+  // SD legend derived from SD_COLORSCALE stops — matches the map's colorbar ticks exactly
+  const sdLegend = useMemo(() => {
+    const tickPcts = [0, 10, 25, 40, 50, 60, 75, 90, 100];
+    return {
+      colors: tickPcts.map(p => interpolateSdColor(p)),
+      labels: tickPcts.map(p => `${p}%`),
+    };
+  }, []);
 
   const renderLegend = (legendData) => {
     if (!legendData) return null;
@@ -170,9 +228,7 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={aspectBox}>
         <div ref={containerRef} style={{ ...aspectInner, cursor: isLoading ? 'wait' : 'default' }}>
-          {/* Title */}
           <div style={subLabel}>{title}</div>
-
           <Globe
             ref={globeRef}
             width={dims.width}
@@ -190,6 +246,7 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
             pointTransitionDuration={0}
           />
           {renderLegend(legend)}
+          {isMean && <ToggleStdButton showStd={showStd} onToggle={onToggleStd} />}
         </div>
       </div>
     </div>
@@ -199,7 +256,7 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle }) => {
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: 8 }}>
         {renderGlobe(meanContainerRef, meanGlobeRef, pointsData.mean, true, meanLegend, fullTitle, meanDims)}
-        {renderGlobe(stdContainerRef, stdGlobeRef, pointsData.std, false, stdLegend, `${fullTitle} (Standard Deviation)`, stdDims)}
+        {showStd && renderGlobe(stdContainerRef, stdGlobeRef, pointsData.std, false, sdLegend, `${fullTitle} (Standard Deviation)`, stdDims)}
       </div>
       {error && <div style={{ color: '#ff6b6b', textAlign: 'center', padding: '10px' }}>{error}</div>}
     </div>

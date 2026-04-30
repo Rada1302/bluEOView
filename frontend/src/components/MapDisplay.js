@@ -125,6 +125,31 @@ const ZoomHint = ({ visible }) => (
   </div>
 );
 
+const ToggleStdButton = ({ showStd, onToggle }) => (
+  <button
+    onClick={onToggle}
+    style={{
+      position: 'absolute',
+      top: 10,
+      right: 10,
+      zIndex: 10,
+      padding: '4px 10px',
+      fontSize: 11,
+      fontWeight: 600,
+      letterSpacing: '0.04em',
+      borderRadius: 4,
+      border: '1px solid rgba(255,255,255,0.25)',
+      backgroundColor: 'rgba(30,30,30,0.75)',
+      color: 'white',
+      cursor: 'pointer',
+      backdropFilter: 'blur(4px)',
+      transition: 'all 0.2s ease',
+    }}
+  >
+    {showStd ? '✕ Hide SD' : '+ Show SD'}
+  </button>
+);
+
 const MapDisplay = ({
   month,
   feature,
@@ -132,6 +157,8 @@ const MapDisplay = ({
   onZoomedAreaChange,
   zoomedArea,
   fullTitle,
+  showStd,
+  onToggleStd,
 }) => {
   const [lats, setLats] = useState([]);
   const [lons, setLons] = useState([]);
@@ -141,12 +168,10 @@ const MapDisplay = ({
   const [maxValue, setMaxValue] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showStd, setShowStd] = useState(false);
   const [isVertical, setIsVertical] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 900 : false
   );
 
-  // Logic to determine if this is a species-specific file
   const isSpecies = useMemo(() => {
     const searchStr = (netcdfUrl || feature || "").toLowerCase();
     return searchStr.includes('species');
@@ -161,15 +186,12 @@ const MapDisplay = ({
   const colorscale = useMemo(() => {
     const n = colors.length;
     const stops = [];
-
     for (let i = 0; i < n; i++) {
       const start = i / n;
       const end = (i + 1) / n;
-
       stops.push([start, colors[i]]);
       stops.push([end, colors[i]]);
     }
-
     return stops;
   }, []);
 
@@ -209,10 +231,8 @@ const MapDisplay = ({
     return () => controller.abort();
   }, [month, feature, netcdfUrl]);
 
-  // Handle colorbar ticks and values
   const { tickvals, ticktext, finalZMin, finalZMax } = useMemo(() => {
     if (isSpecies) {
-      // Force 0.0 to 1.0 with 0.1 intervals
       const vals = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
       return {
         tickvals: vals,
@@ -372,29 +392,7 @@ const MapDisplay = ({
                 <HatchOverlay uncertaintyMask={uncertaintyMask} lats={lats} lons={lons} margin={MARGIN} zoomedArea={zoomedArea} />
               )}
               <ZoomHint visible={isZoomed} />
-
-              <button
-                onClick={() => setShowStd(v => !v)}
-                style={{
-                  position: 'absolute',
-                  top: 10,
-                  right: 10,
-                  zIndex: 10,
-                  padding: '4px 10px',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  letterSpacing: '0.04em',
-                  borderRadius: 4,
-                  border: '1px solid rgba(255,255,255,0.25)',
-                  backgroundColor: 'rgba(30,30,30,0.75)',
-                  color: 'white',
-                  cursor: 'pointer',
-                  backdropFilter: 'blur(4px)',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {showStd ? '✕ Hide SD' : '+ Show SD'}
-              </button>
+              <ToggleStdButton showStd={showStd} onToggle={onToggleStd} />
             </div>
           </div>
         </div>

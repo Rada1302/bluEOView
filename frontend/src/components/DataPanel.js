@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Alert, Typography, CircularProgress } from '@mui/material';
 import GlobeDisplay from './GlobeDisplay';
 import MapDisplay from './MapDisplay';
@@ -27,6 +27,8 @@ const DataPanel = ({
     featuresError,
     allUrls,
 }) => {
+    const [showStd, setShowStd] = useState(false);
+
     // Keep feature in sync when featureOptions change
     useEffect(() => {
         if (!featureOptions.length) {
@@ -62,7 +64,7 @@ const DataPanel = ({
                 zIndex: 'auto',
             }}
         >
-            {/* Unified Control Panel */}
+            {/* Control Panel */}
             <Box sx={{ flex: '0 0 auto', mb: 2, alignItems: 'center' }}>
                 <ControlPanel
                     feature={panel.feature}
@@ -90,7 +92,7 @@ const DataPanel = ({
                     flex: '1 1 auto',
                     position: 'relative',
                     width: '100%',
-                    minHeight: '400px', // Ensures the container doesn't collapse during loading
+                    minHeight: '400px',
                     display: 'flex',
                     flexDirection: 'column'
                 }}
@@ -110,6 +112,8 @@ const DataPanel = ({
                                 zoomedArea={sharedZoom}
                                 fullTitle={fullTitle}
                                 featureOptions={featureOptions}
+                                showStd={showStd}
+                                onToggleStd={() => setShowStd(v => !v)}
                             />
                         )}
                         {panel.view === 'globe' && (
@@ -119,6 +123,8 @@ const DataPanel = ({
                                 netcdfUrl={netcdfUrl}
                                 fullTitle={fullTitle}
                                 featureOptions={featureOptions}
+                                showStd={showStd}
+                                onToggleStd={() => setShowStd(v => !v)}
                             />
                         )}
                     </>
@@ -135,7 +141,6 @@ const DataPanel = ({
                         }}
                     >
                         {featuresLoading ? (
-                            /* Priority 1: Show loading spinner if currently fetching */
                             <>
                                 <CircularProgress color="primary" sx={{ mb: 2 }} />
                                 <Typography variant="h6" color="text.secondary">
@@ -143,7 +148,6 @@ const DataPanel = ({
                                 </Typography>
                             </>
                         ) : (
-                            /* Priority 2: Show error only if loading is finished and no feature is selected */
                             <Alert
                                 severity="error"
                                 sx={{ maxWidth: '600px' }}
