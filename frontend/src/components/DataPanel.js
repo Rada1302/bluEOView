@@ -143,7 +143,7 @@ const DataPanel = ({
                         {featuresLoading ? (
                             <>
                                 <CircularProgress color="primary" sx={{ mb: 2 }} />
-                                <Typography variant="h6" color="text.secondary">
+                                <Typography variant="h6" color="white">
                                     Loading dataset features...
                                 </Typography>
                             </>

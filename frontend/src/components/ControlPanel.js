@@ -15,6 +15,11 @@ import {
   InputAdornment,
   Slider,
   Collapse,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import PublicIcon from '@mui/icons-material/Public';
@@ -22,6 +27,7 @@ import MapIcon from '@mui/icons-material/Map';
 import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import AddIcon from '@mui/icons-material/Add';
 import { MONTH_OPTIONS } from '../constants';
 
 const glassSelect = {
@@ -68,100 +74,178 @@ const toggleGroupSx = {
 };
 
 const RowLabel = ({ children }) => (
-  <Typography
-    sx={{
-      width: 110,
-      flexShrink: 0,
-      color: 'white',
-    }}
-  >
+  <Typography sx={{ width: 110, flexShrink: 0, color: 'white' }}>
     {children}
   </Typography>
 );
 
+// Sentinel value used in the Select to trigger the "add new" flow
+const ADD_NEW_SENTINEL = '__add_new__';
+
 const UrlControl = ({
-  netcdfUrl, setNetcdfUrl,
-  selectedDefault, setSelectedDefault,
-  handleLoad, featuresLoading, featuresError, featureOptions, allUrls,
+  netcdfUrl,
+  selectedDefault,
+  triggerLoad, allUrls,
 }) => {
-  const [editing, setEditing] = useState(false);
-  const isCustomUrl = !!netcdfUrl && !allUrls.find(u => u.value === netcdfUrl);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [draftUrl, setDraftUrl] = useState('');
+  const [sessionUrls, setSessionUrls] = useState(() => allUrls);
+
+  const handleSelectChange = (e) => {
+    const val = e.target.value;
+    if (val === ADD_NEW_SENTINEL) {
+      setDraftUrl('');
+      setDialogOpen(true);
+      return;
+    }
+    triggerLoad(val);
+  };
+
+  const handleConfirmNew = () => {
+    const trimmed = draftUrl.trim();
+    if (!trimmed) return;
+    // Persist to session dropdown first
+    if (!sessionUrls.find(u => u.value === trimmed)) {
+      setSessionUrls(prev => [...prev, { value: trimmed, label: trimmed }]);
+    }
+    setDialogOpen(false);
+    setDraftUrl('');
+    triggerLoad(trimmed);
+  };
+
+  const handleCancelNew = () => {
+    setDialogOpen(false);
+    setDraftUrl('');
+  };
+
+  const selectedValue = selectedDefault || netcdfUrl || '';
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
-      {editing ? (
-        <TextField
-          autoFocus
-          size="small"
-          value={netcdfUrl}
-          onChange={(e) => { setNetcdfUrl(e.target.value); setSelectedDefault(''); }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') { handleLoad(); setEditing(false); }
-            if (e.key === 'Escape') setEditing(false);
+    <Box sx={{ flex: 1, minWidth: 0 }}>
+      <FormControl size="small" sx={{ ...glassSelect, width: '100%' }}>
+        <Select
+          value={selectedValue}
+          displayEmpty
+          renderValue={(value) => {
+            if (!value || value === '') {
+              return <span style={{ opacity: 0.5 }}>Select a source…</span>;
+            }
+            const found = sessionUrls.find(u => u.value === value);
+            if (found && found.label !== found.value) return found.label;
+            return (
+              <span style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>
+                {value}
+              </span>
+            );
           }}
-          placeholder="https://…"
-          sx={{
-            flex: 1, minWidth: 0,
-            '& .MuiInputBase-root': { ...glassSelect },
-            '& .MuiInputBase-input': { color: '#fff' },
-            '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-          }}
-        />
-      ) : (
-        <FormControl size="small" sx={{ ...glassSelect, flex: 1 }}>
-          <Select
-            value={isCustomUrl ? '__custom__' : (selectedDefault || '')}
-            displayEmpty
-            renderValue={(value) => {
-              if (!value) return '';
-              const found = allUrls.find(u => u.value === value);
-              if (found && found.label !== found.value) return found.label;
-              return <span style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>{value}</span>;
+          onChange={handleSelectChange}
+          MenuProps={menuProps}
+        >
+          {sessionUrls.map(opt => (
+            <MenuItem key={opt.value} value={opt.value}>
+              {opt.label !== opt.value
+                ? opt.label
+                : <span style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>{opt.label}</span>}
+            </MenuItem>
+          ))}
+
+          <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)', my: 0.5 }} />
+
+          {/* Add new source option */}
+          <MenuItem
+            value={ADD_NEW_SENTINEL}
+            sx={{
+              color: 'rgba(255,255,255,0.7) !important',
+              gap: 1,
+              '&:hover': { color: '#fff !important' },
             }}
-            onChange={(e) => {
-              const val = e.target.value;
-              setSelectedDefault(val);
-              setNetcdfUrl(val);
-            }}
-            MenuProps={menuProps}
           >
-            {allUrls.map(opt => (
-              <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
-            ))}
-            {isCustomUrl && (
-              <MenuItem value="__custom__" disabled sx={{ fontStyle: 'italic', opacity: 0.6 }}>
-                {netcdfUrl}
-              </MenuItem>
-            )}
-          </Select>
-        </FormControl>
-      )}
+            <AddIcon sx={{ fontSize: 16 }} />
+            Add new source…
+          </MenuItem>
+        </Select>
+      </FormControl>
 
-      <Button
-        size="small"
-        sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)', '&:hover': { borderColor: '#fff' } }}
-        variant="outlined"
-        onClick={() => setEditing(v => !v)}
+      {/* Pop-up dialog for entering a custom URL */}
+      <Dialog
+        open={dialogOpen}
+        onClose={handleCancelNew}
+        PaperProps={{
+          sx: {
+            backgroundColor: 'rgba(20, 20, 20, 0.95)',
+            backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            borderRadius: 2,
+            minWidth: 420,
+          },
+        }}
+        slotProps={{
+          backdrop: { sx: { backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0,0,0,0.4)' } },
+        }}
       >
-        {editing ? 'Cancel' : 'Edit'}
-      </Button>
-
-      <Button
-        size="small"
-        variant="contained"
-        onClick={() => { handleLoad(); setEditing(false); }}
-        disabled={featuresLoading || !netcdfUrl.trim()}
-      >
-        {featuresLoading ? <CircularProgress size={14} /> : 'Load'}
-      </Button>
-
-      {featureOptions.length > 0 && !featuresError && (
-        <Box sx={{
-          width: 8, height: 8, borderRadius: '50%',
-          backgroundColor: '#86efac', flexShrink: 0,
-          boxShadow: '0 0 6px #86efac',
-        }} />
-      )}
+        <DialogTitle sx={{ color: '#fff', pb: 1, fontSize: '1rem', fontWeight: 600 }}>
+          Add new source
+        </DialogTitle>
+        <DialogContent sx={{ pb: 1 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
+            Enter a URL to a NetCDF file or OPeNDAP endpoint.
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            size="small"
+            value={draftUrl}
+            onChange={(e) => setDraftUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleConfirmNew();
+              if (e.key === 'Escape') handleCancelNew();
+            }}
+            placeholder="https://…"
+            sx={{
+              '& .MuiInputBase-root': {
+                backgroundColor: 'rgba(255,255,255,0.08)',
+                borderRadius: 1.5,
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff',
+                fontFamily: 'monospace',
+                fontSize: '0.85rem',
+                '&:hover': { border: '1px solid rgba(255,255,255,0.35)' },
+                '&.Mui-focused': { border: '1px solid rgba(255,255,255,0.5)' },
+              },
+              '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+              '& .MuiInputBase-input': { color: '#fff' },
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button
+            size="small"
+            onClick={handleCancelNew}
+            sx={{
+              color: 'rgba(255,255,255,0.5)',
+              '&:hover': { color: '#fff', backgroundColor: 'rgba(255,255,255,0.08)' },
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="small"
+            variant="contained"
+            onClick={handleConfirmNew}
+            disabled={!draftUrl.trim()}
+            sx={{
+              backgroundColor: 'rgba(255,255,255,0.15)',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.3)',
+              '&:hover': { backgroundColor: 'rgba(255,255,255,0.25)' },
+              '&.Mui-disabled': { color: 'rgba(255,255,255,0.3)', backgroundColor: 'transparent' },
+            }}
+          >
+            Load
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
@@ -176,13 +260,26 @@ const ControlPanel = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(true);
 
-  // Local state for the slider to prevent intermediate API calls while dragging
   const [localMonth, setLocalMonth] = useState(month);
 
-  // Sync local slider when month changes from external source (e.g. initial load)
   useEffect(() => {
     setLocalMonth(month);
   }, [month]);
+
+  const pendingUrl = React.useRef(null);
+
+  useEffect(() => {
+    if (pendingUrl.current !== null) {
+      handleLoad(pendingUrl.current);
+      pendingUrl.current = null;
+    }
+  }, [netcdfUrl]);
+
+  const triggerLoad = React.useCallback((url) => {
+    pendingUrl.current = url;
+    setNetcdfUrl(url);
+    setSelectedDefault(url);
+  }, [setNetcdfUrl, setSelectedDefault]);
 
   const featuresReady = featureOptions.length > 0 && feature != null;
 
@@ -220,13 +317,10 @@ const ControlPanel = ({
           '&:hover': { backgroundColor: 'rgba(255,255,255,0.04)' },
         }}
       >
-        <IconButton onClick={() => setOpen(v => !v)}
-          sx={{ color: 'white', pr: 3 }}>
+        <IconButton onClick={() => setOpen(v => !v)} sx={{ color: 'white', pr: 3 }}>
           {open ? <ExpandLessIcon /> : <ExpandMoreIcon />}
         </IconButton>
-        <Typography sx={{ fontSize: 19 }}>
-          Control Panel
-        </Typography>
+        <Typography sx={{ fontSize: 19 }}>Control Panel</Typography>
         <ToggleButtonGroup
           value={view}
           exclusive
@@ -249,10 +343,9 @@ const ControlPanel = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <RowLabel>Source</RowLabel>
             <UrlControl
-              netcdfUrl={netcdfUrl} setNetcdfUrl={setNetcdfUrl}
-              selectedDefault={selectedDefault} setSelectedDefault={setSelectedDefault}
-              handleLoad={handleLoad} featuresLoading={featuresLoading}
-              featuresError={featuresError} featureOptions={featureOptions}
+              netcdfUrl={netcdfUrl}
+              selectedDefault={selectedDefault}
+              triggerLoad={triggerLoad}
               allUrls={allUrls}
             />
           </Box>
@@ -331,9 +424,7 @@ const ControlPanel = ({
                 max={13}
                 step={1}
                 marks={sliderMarks}
-                // Update UI immediately while dragging
                 onChange={(_, val) => setLocalMonth(val)}
-                // Only trigger the actual data change when the user lets go
                 onChangeCommitted={(_, val) => onMonthChange?.(val)}
                 sx={{
                   flex: 1,
