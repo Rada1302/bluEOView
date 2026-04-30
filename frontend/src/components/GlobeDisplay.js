@@ -86,20 +86,21 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleS
       if (meanContainerRef.current) {
         setMeanDims({
           width: meanContainerRef.current.offsetWidth,
-          height: meanContainerRef.current.offsetHeight
+          height: meanContainerRef.current.offsetHeight,
         });
       }
       if (stdContainerRef.current) {
         setStdDims({
           width: stdContainerRef.current.offsetWidth,
-          height: stdContainerRef.current.offsetHeight
+          height: stdContainerRef.current.offsetHeight,
         });
       }
     };
+
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
-  }, []);
+  }, [showStd]); // re-measure when SD panel appears/disappears
 
   const fetchData = useCallback(async (month, feature, signal) => {
     if (!feature || !netcdfUrl) return;
@@ -178,7 +179,6 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleS
       : getLegendFromColorscale(colorscale, minValue, maxValue)
   ), [minValue, maxValue, colorscale]);
 
-  // SD legend derived from SD_COLORSCALE stops — matches the map's colorbar ticks exactly
   const sdLegend = useMemo(() => {
     const tickPcts = [0, 10, 25, 40, 50, 60, 75, 90, 100];
     return {
@@ -213,21 +213,34 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleS
     );
   };
 
-  const aspectBox = { position: 'relative', width: '100%', paddingTop: '56.25%' };
-  const aspectInner = {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: '#0a0a0a', borderRadius: 6, overflow: 'hidden',
-  };
   const subLabel = {
     position: 'absolute', top: 10, left: 0, width: '100%',
     textAlign: 'center', fontSize: 17, color: 'white',
     pointerEvents: 'none', zIndex: 5,
   };
 
+  // Each globe wrapper uses a 16:9 padding trick BUT is centred inside a flex cell
   const renderGlobe = (containerRef, globeRef, data, isMean, legend, title, dims) => (
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={aspectBox}>
-        <div ref={containerRef} style={{ ...aspectInner, cursor: isLoading ? 'wait' : 'default' }}>
+    <div style={{
+      flex: 1,
+      minWidth: 0,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>
+      {/* Aspect-ratio sizer: expands to fill the flex cell's width, keeps 16:9 height */}
+      <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%' }}>
+        <div
+          ref={containerRef}
+          style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: '#0a0a0a',
+            borderRadius: 6,
+            overflow: 'hidden',
+            cursor: isLoading ? 'wait' : 'default',
+          }}
+        >
           <div style={subLabel}>{title}</div>
           <Globe
             ref={globeRef}
@@ -254,7 +267,12 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleS
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: 8 }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: isVertical ? 'column' : 'row',
+        gap: 8,
+        alignItems: 'stretch',
+      }}>
         {renderGlobe(meanContainerRef, meanGlobeRef, pointsData.mean, true, meanLegend, fullTitle, meanDims)}
         {showStd && renderGlobe(stdContainerRef, stdGlobeRef, pointsData.std, false, sdLegend, `${fullTitle} (Standard Deviation)`, stdDims)}
       </div>
