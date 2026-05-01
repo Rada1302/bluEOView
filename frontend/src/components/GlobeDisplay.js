@@ -3,105 +3,129 @@ import Globe from 'react-globe.gl';
 import {
   generateColorStops,
   getInterpolatedColorFromValue,
-  getLegendFromColorscale
+  getLegendFromColorscale,
 } from '../utils';
+import { colors, EARTH_TEXTURE, SD_COLORSCALE, SD_THRESHOLD } from '../constants';
 
-import { colors, EARTH_TEXTURE, SD_COLORSCALE } from '../constants';
+// colour interpolators
+const parseHex = hex => {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+};
 
-const SD_THRESHOLD = 50;
-
-const interpolateSdColor = (() => {
-  const parseHex = (hex) => {
-    const h = hex.replace('#', '');
-    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-  };
-  return (pct) => {
-    const t = Math.max(0, Math.min(100, pct)) / 100;
-    let lo = SD_COLORSCALE[0];
-    let hi = SD_COLORSCALE[SD_COLORSCALE.length - 1];
-    for (let i = 0; i < SD_COLORSCALE.length - 1; i++) {
-      if (t >= SD_COLORSCALE[i][0] && t <= SD_COLORSCALE[i + 1][0]) {
-        lo = SD_COLORSCALE[i];
-        hi = SD_COLORSCALE[i + 1];
-        break;
-      }
+// Generic interpolator
+const makeInterpolator = (scale) => (pct) => {
+  const t = Math.max(0, Math.min(100, pct)) / 100;
+  let lo = scale[0];
+  let hi = scale[scale.length - 1];
+  for (let i = 0; i < scale.length - 1; i++) {
+    if (t >= scale[i][0] && t <= scale[i + 1][0]) {
+      lo = scale[i];
+      hi = scale[i + 1];
+      break;
     }
-    const range = hi[0] - lo[0];
-    const f = range === 0 ? 0 : (t - lo[0]) / range;
-    const [r0, g0, b0] = parseHex(lo[1]);
-    const [r1, g1, b1] = parseHex(hi[1]);
-    const r = Math.round(r0 + (r1 - r0) * f);
-    const g = Math.round(g0 + (g1 - g0) * f);
-    const b = Math.round(b0 + (b1 - b0) * f);
-    return `rgb(${r},${g},${b})`;
-  };
-})();
+  }
+  const range = hi[0] - lo[0];
+  const f = range === 0 ? 0 : (t - lo[0]) / range;
+  const [r0, g0, b0] = parseHex(lo[1]);
+  const [r1, g1, b1] = parseHex(hi[1]);
+  return `rgb(${Math.round(r0 + (r1 - r0) * f)},${Math.round(g0 + (g1 - g0) * f)},${Math.round(b0 + (b1 - b0) * f)})`;
+};
 
-const ToggleStdButton = ({ showStd, onToggle }) => (
-  <button
-    onClick={onToggle}
-    style={{
-      position: 'absolute',
-      top: 10,
-      right: 10,
-      zIndex: 10,
-      padding: '4px 10px',
-      fontSize: 11,
-      fontWeight: 600,
-      letterSpacing: '0.04em',
-      borderRadius: 4,
-      border: '1px solid rgba(255,255,255,0.25)',
-      backgroundColor: 'rgba(30,30,30,0.75)',
-      color: 'white',
-      cursor: 'pointer',
-      backdropFilter: 'blur(4px)',
-      transition: 'all 0.2s ease',
-    }}
-  >
-    {showStd ? '✕ Hide SD' : '+ Show SD'}
-  </button>
+const interpolateSdColor = makeInterpolator(SD_COLORSCALE);
+
+// Yellow to red for obs density/presence
+const OBS_COLORSCALE_GLOBE = [
+  [0.00, '#ffffcc'],
+  [0.10, '#ffeda0'],
+  [0.25, '#feb24c'],
+  [0.50, '#f03b20'],
+  [0.75, '#bd0026'],
+  [1.00, '#67000d'],
+];
+const interpolateObsColor = makeInterpolator(OBS_COLORSCALE_GLOBE);
+
+// sub-components
+const PanelToggleBar = ({ panels }) => (
+  <div style={{
+    position: 'absolute', top: 10, right: 10, zIndex: 10,
+    display: 'flex', gap: 6,
+  }}>
+    {panels.map(({ id, label, active, onToggle }) => (
+      <button
+        key={id}
+        onClick={onToggle}
+        style={{
+          padding: '4px 10px',
+          fontSize: 11, fontWeight: 600, letterSpacing: '0.04em',
+          borderRadius: 4,
+          border: '1px solid rgba(255,255,255,0.25)',
+          backgroundColor: active ? 'rgba(60,80,120,0.85)' : 'rgba(30,30,30,0.75)',
+          color: 'white', cursor: 'pointer',
+          backdropFilter: 'blur(4px)',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        {active ? `✕ Hide ${label}` : `+ Show ${label}`}
+      </button>
+    ))}
+  </div>
 );
 
-const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleStd }) => {
+// main component
+const GlobeDisplay = ({
+  month,
+  feature,
+  netcdfUrl,
+  fullTitle,
+  showStd,
+  onToggleStd,
+  showObs,
+  onToggleObs,
+}) => {
   const meanContainerRef = useRef(null);
   const stdContainerRef = useRef(null);
+  const obsContainerRef = useRef(null);
   const meanGlobeRef = useRef();
   const stdGlobeRef = useRef();
+  const obsGlobeRef = useRef();
 
   const [meanDims, setMeanDims] = useState({ width: 0, height: 0 });
   const [stdDims, setStdDims] = useState({ width: 0, height: 0 });
-  const [pointsData, setPointsData] = useState({ mean: [], std: [] });
+  const [obsDims, setObsDims] = useState({ width: 0, height: 0 });
+
+  const [pointsData, setPointsData] = useState({ mean: [], std: [], obs: [] });
   const [minValue, setMinValue] = useState(null);
   const [maxValue, setMaxValue] = useState(null);
+  const [hasObs, setHasObs] = useState(false);
+  const [obsType, setObsType] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isVertical, setIsVertical] = useState(typeof window !== 'undefined' ? window.innerWidth < 900 : false);
+  const [isVertical, setIsVertical] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 900 : false
+  );
 
   const cacheRef = useRef({});
   const colorscale = useMemo(() => generateColorStops(colors), []);
 
+  // measure containers
   useEffect(() => {
     const measure = () => {
       setIsVertical(window.innerWidth < 900);
-      if (meanContainerRef.current) {
-        setMeanDims({
-          width: meanContainerRef.current.offsetWidth,
-          height: meanContainerRef.current.offsetHeight,
-        });
-      }
-      if (stdContainerRef.current) {
-        setStdDims({
-          width: stdContainerRef.current.offsetWidth,
-          height: stdContainerRef.current.offsetHeight,
-        });
-      }
+      if (meanContainerRef.current)
+        setMeanDims({ width: meanContainerRef.current.offsetWidth, height: meanContainerRef.current.offsetHeight });
+      if (stdContainerRef.current)
+        setStdDims({ width: stdContainerRef.current.offsetWidth, height: stdContainerRef.current.offsetHeight });
+      if (obsContainerRef.current)
+        setObsDims({ width: obsContainerRef.current.offsetWidth, height: obsContainerRef.current.offsetHeight });
     };
 
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
-  }, [showStd]); // re-measure when SD panel appears/disappears
+  }, [showStd, showObs]); // re-measure when panels appear/disappear
 
+  // fetch
   const fetchData = useCallback(async (month, feature, signal) => {
     if (!feature || !netcdfUrl) return;
     const cacheKey = `${month}_${feature}_${netcdfUrl}`;
@@ -110,6 +134,8 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleS
       setPointsData(c.pointsData);
       setMinValue(c.minValue);
       setMaxValue(c.maxValue);
+      setHasObs(c.hasObs);
+      setObsType(c.obsType);
       setError(null);
       return;
     }
@@ -121,23 +147,29 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleS
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? `Server error ${res.status}`);
 
-      const { lats, lons, mean, sd, minValue: minVal, maxValue: maxVal, sdMax } = json;
+      const { lats, lons, mean, sd, obs, obsMax, obsType: oType, hasObs: hObs } = json;
+
+      // SD: normalise using sdGlobalMax (per-target, all-time stable max)
+      const sdGlobalMax = json.sdGlobalMax ?? json.sdMax ?? null;
 
       const step = 3;
       const meanPoints = [];
       const stdPoints = [];
+      const obsPoints = [];
 
       for (let li = 0; li < lats.length; li += step) {
         const lat = lats[li];
         const dataRow = lats.length - 1 - li;
+
         for (let oi = 0; oi < lons.length; oi += step) {
           const lon = lons[oi] > 180 ? lons[oi] - 360 : lons[oi];
           const meanVal = mean?.[dataRow]?.[oi];
           const sdVal = sd?.[dataRow]?.[oi];
+          const obsVal = obs?.[dataRow]?.[oi];
 
           if (meanVal === null || meanVal === undefined) continue;
 
-          const sdPct = (sdMax > 0 && sdVal != null) ? (sdVal / sdMax) * 100 : 0;
+          const sdPct = (sdGlobalMax > 0 && sdVal != null) ? (sdVal / sdGlobalMax) * 100 : 0;
 
           meanPoints.push({
             lat, lng: lon,
@@ -146,20 +178,33 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleS
           });
 
           if (sdVal !== null && sdVal !== undefined) {
-            stdPoints.push({
-              lat, lng: lon,
-              sdPct,
-              color: interpolateSdColor(sdPct),
-            });
+            stdPoints.push({ lat, lng: lon, sdPct, color: interpolateSdColor(sdPct) });
+          }
+
+          if (hObs && obsVal !== null && obsVal !== undefined) {
+            // For density: normalise to 0-100; for taxa presence: 0 or 100
+            const obsPct = oType === 'taxa'
+              ? (obsVal > 0 ? 100 : 0)
+              : (obsMax > 0 ? (obsVal / obsMax) * 100 : 0);
+            obsPoints.push({ lat, lng: lon, obsPct, color: interpolateObsColor(obsPct) });
           }
         }
       }
 
-      const transformed = { mean: meanPoints, std: stdPoints };
-      cacheRef.current[cacheKey] = { pointsData: transformed, minValue: minVal, maxValue: maxVal };
+      const transformed = { mean: meanPoints, std: stdPoints, obs: obsPoints };
+      cacheRef.current[cacheKey] = {
+        pointsData: transformed,
+        minValue: json.minValue,
+        maxValue: json.maxValue,
+        hasObs: hObs ?? false,
+        obsType: oType ?? null,
+      };
+
       setPointsData(transformed);
-      setMinValue(minVal);
-      setMaxValue(maxVal);
+      setMinValue(json.minValue);
+      setMaxValue(json.maxValue);
+      setHasObs(hObs ?? false);
+      setObsType(oType ?? null);
       setError(null);
     } catch (err) {
       if (err.name !== 'AbortError') setError(err.message);
@@ -174,19 +219,28 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleS
     return () => controller.abort();
   }, [month, feature, netcdfUrl, fetchData]);
 
-  const meanLegend = useMemo(() => (
-    minValue == null || maxValue == null ? null
-      : getLegendFromColorscale(colorscale, minValue, maxValue)
-  ), [minValue, maxValue, colorscale]);
+  // legends
+  const meanLegend = useMemo(
+    () => minValue == null || maxValue == null
+      ? null
+      : getLegendFromColorscale(colorscale, minValue, maxValue),
+    [minValue, maxValue, colorscale]
+  );
 
   const sdLegend = useMemo(() => {
-    const tickPcts = [0, 10, 25, 40, 50, 60, 75, 90, 100];
-    return {
-      colors: tickPcts.map(p => interpolateSdColor(p)),
-      labels: tickPcts.map(p => `${p}%`),
-    };
+    const ticks = [0, 10, 25, 40, 50, 60, 75, 90, 100];
+    return { colors: ticks.map(p => interpolateSdColor(p)), labels: ticks.map(p => `${p}%`) };
   }, []);
 
+  const obsLegend = useMemo(() => {
+    if (obsType === 'taxa') {
+      return { colors: ['#ffffcc', '#67000d'], labels: ['Absent', 'Present'] };
+    }
+    const ticks = [0, 25, 50, 75, 100];
+    return { colors: ticks.map(p => interpolateObsColor(p)), labels: ticks.map(p => `${p}%`) };
+  }, [obsType]);
+
+  // legend renderer
   const renderLegend = (legendData) => {
     if (!legendData) return null;
     return (
@@ -213,31 +267,21 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleS
     );
   };
 
+  // globe panel renderer
   const subLabel = {
     position: 'absolute', top: 10, left: 0, width: '100%',
     textAlign: 'center', fontSize: 17, color: 'white',
     pointerEvents: 'none', zIndex: 5,
   };
 
-  // Each globe wrapper uses a 16:9 padding trick BUT is centred inside a flex cell
-  const renderGlobe = (containerRef, globeRef, data, isMean, legend, title, dims) => (
-    <div style={{
-      flex: 1,
-      minWidth: 0,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
-      {/* Aspect-ratio sizer: expands to fill the flex cell's width, keeps 16:9 height */}
+  const renderGlobe = (containerRef, globeRef, data, colorFn, legend, title, dims, controls) => (
+    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%' }}>
         <div
           ref={containerRef}
           style={{
-            position: 'absolute',
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: '#0a0a0a',
-            borderRadius: 6,
-            overflow: 'hidden',
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: '#0a0a0a', borderRadius: 6, overflow: 'hidden',
             cursor: isLoading ? 'wait' : 'default',
           }}
         >
@@ -249,22 +293,24 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleS
             globeImageUrl={EARTH_TEXTURE}
             backgroundColor="rgba(0,0,0,0)"
             pointsData={data}
-            pointColor={d => isMean
-              ? (d.isUncertain ? 'rgba(0,0,0,0.6)' : getInterpolatedColorFromValue(d.val, minValue, maxValue, colorscale))
-              : d.color
-            }
+            pointColor={colorFn}
             pointRadius={1.2}
             pointAltitude={0.005}
             pointsMerge={true}
             pointTransitionDuration={0}
           />
           {renderLegend(legend)}
-          {isMean && <ToggleStdButton showStd={showStd} onToggle={onToggleStd} />}
+          {controls}
         </div>
       </div>
     </div>
   );
 
+  const obsTitle = obsType === 'taxa'
+    ? `${fullTitle} (Taxa Observations)`
+    : `${fullTitle} (Observation Density)`;
+
+  // render
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{
@@ -273,9 +319,46 @@ const GlobeDisplay = ({ month, feature, netcdfUrl, fullTitle, showStd, onToggleS
         gap: 8,
         alignItems: 'stretch',
       }}>
-        {renderGlobe(meanContainerRef, meanGlobeRef, pointsData.mean, true, meanLegend, fullTitle, meanDims)}
-        {showStd && renderGlobe(stdContainerRef, stdGlobeRef, pointsData.std, false, sdLegend, `${fullTitle} (Standard Deviation)`, stdDims)}
+
+        {/* Mean globe */}
+        {renderGlobe(
+          meanContainerRef, meanGlobeRef,
+          pointsData.mean,
+          d => d.isUncertain
+            ? 'rgba(0,0,0,0.6)'
+            : getInterpolatedColorFromValue(d.val, minValue, maxValue, colorscale),
+          meanLegend,
+          fullTitle,
+          meanDims,
+          <PanelToggleBar panels={[
+            { id: 'sd', label: 'SD', active: showStd, onToggle: onToggleStd },
+            ...(hasObs ? [{ id: 'obs', label: 'Obs', active: showObs, onToggle: onToggleObs }] : []),
+          ]} />,
+        )}
+
+        {/* SD globe */}
+        {showStd && renderGlobe(
+          stdContainerRef, stdGlobeRef,
+          pointsData.std,
+          d => d.color,
+          sdLegend,
+          `${fullTitle} (Standard Deviation)`,
+          stdDims,
+          null,
+        )}
+
+        {/* Obs globe */}
+        {showObs && hasObs && renderGlobe(
+          obsContainerRef, obsGlobeRef,
+          pointsData.obs,
+          d => d.color,
+          obsLegend,
+          obsTitle,
+          obsDims,
+          null,
+        )}
       </div>
+
       {error && <div style={{ color: '#ff6b6b', textAlign: 'center', padding: '10px' }}>{error}</div>}
     </div>
   );

@@ -1,4 +1,4 @@
-export const STD_THRESHOLD = 1.0;
+export const SD_THRESHOLD = 50;
 
 // Explanatory descriptions
 export const howGenerated = "This is how diversity / species were generated."

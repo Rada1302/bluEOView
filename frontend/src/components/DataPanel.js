@@ -28,6 +28,7 @@ const DataPanel = ({
     allUrls,
 }) => {
     const [showStd, setShowStd] = useState(false);
+    const [showObs, setShowObs] = useState(false);
 
     // Keep feature in sync when featureOptions change
     useEffect(() => {
@@ -38,6 +39,11 @@ const DataPanel = ({
         const exists = featureOptions.some(f => f.value === panel.feature);
         if (!exists) setPanel(prev => ({ ...prev, feature: featureOptions[0].value }));
     }, [featureOptions, panel.feature, setPanel]);
+
+    // Reset obs panel when switching datasets (url changes)
+    useEffect(() => {
+        setShowObs(false);
+    }, [netcdfUrl]);
 
     const isAnnualMean = panel.month === 13;
     const isSpecies = netcdfUrl?.toLowerCase().includes('species');
@@ -50,6 +56,20 @@ const DataPanel = ({
         setPanel(prev => ({ ...prev, month: val }));
         debouncedUpdateMonth(val);
         onMonthChange?.(val);
+    };
+
+    const sharedDisplayProps = {
+        month: debouncedMonth,
+        feature: panel.feature,
+        netcdfUrl: netcdfUrl,
+        fullTitle: fullTitle,
+        featureOptions,
+        showStd,
+        onToggleStd: () => setShowStd(v => !v),
+        showObs,
+        onToggleObs: () => setShowObs(v => !v),
+        subTitleMean: aboutMean,
+        subTitleSD: aboutSD,
     };
 
     return (
@@ -94,41 +114,25 @@ const DataPanel = ({
                     width: '100%',
                     minHeight: '400px',
                     display: 'flex',
-                    flexDirection: 'column'
+                    flexDirection: 'column',
                 }}
             >
                 {panel.feature ? (
                     <>
                         {panel.view === 'map' && (
                             <MapDisplay
-                                month={debouncedMonth}
-                                feature={panel.feature}
-                                netcdfUrl={netcdfUrl}
+                                {...sharedDisplayProps}
                                 selectedArea={selectedArea}
                                 onZoomedAreaChange={(area) => {
                                     setArea(area);
                                     onSharedZoomChange?.(area);
                                 }}
                                 zoomedArea={sharedZoom}
-                                fullTitle={fullTitle}
-                                featureOptions={featureOptions}
-                                showStd={showStd}
-                                onToggleStd={() => setShowStd(v => !v)}
-                                subTitleMean={aboutMean}
-                                subTitleSD={aboutSD}
                             />
                         )}
                         {panel.view === 'globe' && (
                             <GlobeDisplay
-                                month={debouncedMonth}
-                                feature={panel.feature}
-                                netcdfUrl={netcdfUrl}
-                                fullTitle={fullTitle}
-                                featureOptions={featureOptions}
-                                showStd={showStd}
-                                onToggleStd={() => setShowStd(v => !v)}
-                                subTitleMean={aboutMean}
-                                subTitleSD={aboutSD}
+                                {...sharedDisplayProps}
                             />
                         )}
                     </>
@@ -141,7 +145,7 @@ const DataPanel = ({
                             justifyContent: 'center',
                             alignItems: 'center',
                             textAlign: 'center',
-                            p: 3
+                            p: 3,
                         }}
                     >
                         {featuresLoading ? (
@@ -152,10 +156,7 @@ const DataPanel = ({
                                 </Typography>
                             </>
                         ) : (
-                            <Alert
-                                severity="error"
-                                sx={{ maxWidth: '600px' }}
-                            >
+                            <Alert severity="error" sx={{ maxWidth: '600px' }}>
                                 {"File not found or not in the correct format: No valid features available in this dataset."}
                             </Alert>
                         )}

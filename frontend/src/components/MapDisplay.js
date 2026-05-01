@@ -5,10 +5,22 @@ import {
   aboutSD,
   colors,
   EARTH_TEXTURE,
-  SD_COLORSCALE
+  SD_COLORSCALE,
+  SD_THRESHOLD
 } from '../constants';
 import { generateColorbarTicks } from '../utils';
 
+// colour scale for obs density / presence
+const OBS_COLORSCALE = [
+  [0.00, '#ffffcc'],
+  [0.10, '#ffeda0'],
+  [0.25, '#feb24c'],
+  [0.50, '#f03b20'],
+  [0.75, '#bd0026'],
+  [1.00, '#67000d'],
+];
+
+// shared axis / layout constants
 const axisBase = {
   showgrid: false,
   zeroline: false,
@@ -18,6 +30,8 @@ const axisBase = {
 };
 
 const MARGIN = { l: 20, r: 70, t: 70, b: 20 };
+
+// sub-components
 
 const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
   const canvasRef = useRef(null);
@@ -46,8 +60,8 @@ const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
     const lonRange = lonMax - lonMin;
     const latRange = latAtBotPx - latAtTopPx;
 
-    const lonToX = (lon) => margin.l + ((lon - lonMin) / lonRange) * plotW;
-    const latToY = (lat) => margin.t + ((lat - latAtTopPx) / latRange) * plotH;
+    const lonToX = lon => margin.l + ((lon - lonMin) / lonRange) * plotW;
+    const latToY = lat => margin.t + ((lat - latAtTopPx) / latRange) * plotH;
 
     const cellLonHalf = lons.length > 1 ? Math.abs(lons[1] - lons[0]) / 2 : 0;
     const cellLatHalf = lats.length > 1 ? Math.abs(lats[1] - lats[0]) / 2 : 0;
@@ -69,7 +83,10 @@ const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
         const x1 = lonToX(lon + cellLonHalf);
         const yA = latToY(lat - cellLatHalf);
         const yB = latToY(lat + cellLatHalf);
-        ctx.rect(Math.min(x0, x1), Math.min(yA, yB), Math.abs(x1 - x0), Math.abs(yB - yA));
+        ctx.rect(
+          Math.min(x0, x1), Math.min(yA, yB),
+          Math.abs(x1 - x0), Math.abs(yB - yA)
+        );
       }
     }
     ctx.clip();
@@ -90,68 +107,60 @@ const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
     <canvas
       ref={canvasRef}
       style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        zIndex: 3,
+        position: 'absolute', top: 0, left: 0,
+        width: '100%', height: '100%',
+        pointerEvents: 'none', zIndex: 3,
       }}
     />
   );
 };
 
 const ZoomHint = ({ visible }) => (
-  <div
-    style={{
-      position: 'absolute',
-      bottom: 15,
-      left: '50%',
-      transform: `translateX(-50%) translateY(${visible ? 0 : 8}px)`,
-      opacity: visible ? 1 : 0,
-      transition: 'all 0.25s ease',
-      pointerEvents: 'none',
-      zIndex: 10,
-      display: 'flex',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.8)',
-      border: '1px solid rgba(255,255,255,0.2)',
-      borderRadius: 20,
-      padding: '6px 14px',
-      color: 'white',
-      fontSize: 12,
-    }}
-  >
+  <div style={{
+    position: 'absolute', bottom: 15, left: '50%',
+    transform: `translateX(-50%) translateY(${visible ? 0 : 8}px)`,
+    opacity: visible ? 1 : 0,
+    transition: 'all 0.25s ease',
+    pointerEvents: 'none', zIndex: 10,
+    display: 'flex', alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    border: '1px solid rgba(255,255,255,0.2)',
+    borderRadius: 20, padding: '6px 14px',
+    color: 'white', fontSize: 12,
+  }}>
     <span>Double-click to reset zoom</span>
   </div>
 );
 
-const ToggleStdButton = ({ showStd, onToggle }) => (
-  <button
-    onClick={onToggle}
-    style={{
-      position: 'absolute',
-      top: 10,
-      right: 10,
-      zIndex: 10,
-      padding: '4px 10px',
-      fontSize: 11,
-      fontWeight: 600,
-      letterSpacing: '0.04em',
-      borderRadius: 4,
-      border: '1px solid rgba(255,255,255,0.25)',
-      backgroundColor: 'rgba(30,30,30,0.75)',
-      color: 'white',
-      cursor: 'pointer',
-      backdropFilter: 'blur(4px)',
-      transition: 'all 0.2s ease',
-    }}
-  >
-    {showStd ? '✕ Hide SD' : '+ Show SD'}
-  </button>
+// SD & Obs buttons
+const PanelToggleBar = ({ panels }) => (
+  <div style={{
+    position: 'absolute', top: 10, right: 10, zIndex: 10,
+    display: 'flex', gap: 6,
+  }}>
+    {panels.map(({ id, label, active, onToggle }) => (
+      <button
+        key={id}
+        onClick={onToggle}
+        style={{
+          padding: '4px 10px',
+          fontSize: 11, fontWeight: 600,
+          letterSpacing: '0.04em',
+          borderRadius: 4,
+          border: '1px solid rgba(255,255,255,0.25)',
+          backgroundColor: active ? 'rgba(60,80,120,0.85)' : 'rgba(30,30,30,0.75)',
+          color: 'white', cursor: 'pointer',
+          backdropFilter: 'blur(4px)',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        {active ? `✕ Hide ${label}` : `+ Show ${label}`}
+      </button>
+    ))}
+  </div>
 );
 
+// main component
 const MapDisplay = ({
   month,
   feature,
@@ -161,11 +170,17 @@ const MapDisplay = ({
   fullTitle,
   showStd,
   onToggleStd,
+  showObs,
+  onToggleObs,
 }) => {
   const [lats, setLats] = useState([]);
   const [lons, setLons] = useState([]);
   const [meanData, setMeanData] = useState([]);
   const [stdData, setStdData] = useState([]);
+  const [obsData, setObsData] = useState([]);
+  const [obsMax, setObsMax] = useState(null);
+  const [obsType, setObsType] = useState(null); // "taxa" | "diversity" | null
+  const [hasObs, setHasObs] = useState(false);
   const [minValue, setMinValue] = useState(null);
   const [maxValue, setMaxValue] = useState(null);
   const [error, setError] = useState(null);
@@ -175,28 +190,28 @@ const MapDisplay = ({
   );
 
   const isSpecies = useMemo(() => {
-    const searchStr = (netcdfUrl || feature || "").toLowerCase();
-    return searchStr.includes('species');
+    const s = (netcdfUrl || feature || '').toLowerCase();
+    return s.includes('species') || s.includes('taxa');
   }, [netcdfUrl, feature]);
 
   useEffect(() => {
-    const handleResize = () => setIsVertical(window.innerWidth < 900);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const h = () => setIsVertical(window.innerWidth < 900);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
   }, []);
 
+  // Mean colorscale (stepped)
   const colorscale = useMemo(() => {
     const n = colors.length;
     const stops = [];
     for (let i = 0; i < n; i++) {
-      const start = i / n;
-      const end = (i + 1) / n;
-      stops.push([start, colors[i]]);
-      stops.push([end, colors[i]]);
+      stops.push([i / n, colors[i]]);
+      stops.push([(i + 1) / n, colors[i]]);
     }
     return stops;
   }, []);
 
+  // fetch
   useEffect(() => {
     if (!feature || !netcdfUrl) return;
     const controller = new AbortController();
@@ -204,15 +219,23 @@ const MapDisplay = ({
     const fetchData = async () => {
       setLoading(true);
       try {
-        const params = new URLSearchParams({ feature, timeIndex: month.toString(), file: netcdfUrl });
+        const params = new URLSearchParams({
+          feature,
+          timeIndex: month.toString(),
+          file: netcdfUrl,
+        });
         const res = await fetch(`/api/diversity-map?${params}`, { signal: controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
 
+        // SD normalisation
+        // Use sdGlobalMax (per-target, all-time max) for stable colour scaling.
+        const sdGlobalMax = json.sdGlobalMax ?? json.sdMax ?? null;
         const rawSd = json.sd ?? [];
-        const sdMaxV = json.sdMax ?? null;
-        const sdPct = sdMaxV > 0
-          ? rawSd.map(row => row.map(v => v === null ? null : Math.round(v / sdMaxV * 100 * 10) / 10))
+        const sdPct = sdGlobalMax > 0
+          ? rawSd.map(row =>
+            row.map(v => v === null ? null : Math.round(v / sdGlobalMax * 100 * 10) / 10)
+          )
           : rawSd;
 
         setLats(json.lats ?? []);
@@ -221,6 +244,13 @@ const MapDisplay = ({
         setStdData(sdPct);
         setMinValue(json.minValue ?? null);
         setMaxValue(json.maxValue ?? null);
+
+        // obs
+        setHasObs(json.hasObs ?? false);
+        setObsType(json.obsType ?? null);
+        setObsData(json.obs ?? []);
+        setObsMax(json.obsMax ?? null);
+
         setError(null);
       } catch (err) {
         if (err.name !== 'AbortError') setError(err.message);
@@ -233,36 +263,25 @@ const MapDisplay = ({
     return () => controller.abort();
   }, [month, feature, netcdfUrl]);
 
+  // derived data
   const { tickvals, ticktext, finalZMin, finalZMax } = useMemo(() => {
     if (isSpecies) {
       const vals = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-      return {
-        tickvals: vals,
-        ticktext: vals.map(v => v.toFixed(1)),
-        finalZMin: 0.0,
-        finalZMax: 1.0
-      };
+      return { tickvals: vals, ticktext: vals.map(v => v.toFixed(1)), finalZMin: 0, finalZMax: 1 };
     }
-
     if (minValue == null || maxValue == null) {
       return { tickvals: [], ticktext: [], finalZMin: minValue, finalZMax: maxValue };
     }
-
     const ticks = generateColorbarTicks(minValue, maxValue, colorscale.length);
-    return {
-      ...ticks,
-      finalZMin: minValue,
-      finalZMax: maxValue
-    };
+    return { ...ticks, finalZMin: minValue, finalZMax: maxValue };
   }, [isSpecies, minValue, maxValue, colorscale.length]);
 
-  const sdThreshold = 50;
   const hasHighSD = useMemo(
-    () => stdData.some(row => row.some(v => v !== null && v > sdThreshold)),
+    () => stdData.some(row => row.some(v => v !== null && v > SD_THRESHOLD)),
     [stdData]
   );
   const uncertaintyMask = useMemo(
-    () => stdData.map(row => row.map(v => (v !== null && v > sdThreshold ? 1 : 0))),
+    () => stdData.map(row => row.map(v => (v !== null && v > SD_THRESHOLD ? 1 : 0))),
     [stdData]
   );
 
@@ -286,7 +305,6 @@ const MapDisplay = ({
     ),
     [meanData, uncertaintyMask]
   );
-
   const meanHoverBorderColor = useMemo(
     () => meanData.map((row, ri) =>
       row.map((_, ci) =>
@@ -296,6 +314,42 @@ const MapDisplay = ({
     [meanData, uncertaintyMask]
   );
 
+  // obs colour bar ticks
+  const obsTicks = useMemo(() => {
+    if (obsType === 'taxa') {
+      return {
+        tickvals: [0, 1],
+        ticktext: ['Absent', 'Present'],
+        zmin: 0,
+        zmax: 1,
+      };
+    }
+    // diversity density
+    const maxV = obsMax ?? 1;
+    const step = Math.pow(10, Math.floor(Math.log10(maxV)) - 1);
+    const ticks = [];
+    for (let v = 0; v <= maxV; v += step) ticks.push(Math.round(v));
+    if (ticks[ticks.length - 1] !== Math.round(maxV)) ticks.push(Math.round(maxV));
+    // cap to 6 labels
+    const stride = Math.max(1, Math.ceil(ticks.length / 6));
+    const filtered = ticks.filter((_, i) => i % stride === 0);
+    return {
+      tickvals: filtered,
+      ticktext: filtered.map(v => String(v)),
+      zmin: 0,
+      zmax: maxV,
+    };
+  }, [obsType, obsMax]);
+
+  const obsTitle = obsType === 'taxa'
+    ? `${fullTitle} (Taxa Observations)`
+    : `${fullTitle} (Observation Density)`;
+
+  const obsSubtitle = obsType === 'taxa'
+    ? 'Locations where this taxon was recorded'
+    : 'Number of observations used to compute diversity';
+
+  // layout
   const isZoomed = zoomedArea != null;
 
   const colorbarBase = {
@@ -304,10 +358,8 @@ const MapDisplay = ({
     ticks: 'outside',
     thickness: 18,
     len: 0.84,
-    yanchor: 'top',
-    y: 0.9,
-    xanchor: 'left',
-    x: 1.01,
+    yanchor: 'top', y: 0.9,
+    xanchor: 'left', x: 1.01,
     outlinecolor: 'rgba(255,255,255,0.15)',
   };
 
@@ -329,7 +381,7 @@ const MapDisplay = ({
     yaxis: {
       ...axisBase,
       autorange: zoomedArea?.y ? false : 'reversed',
-      range: zoomedArea?.y ?? undefined
+      range: zoomedArea?.y ?? undefined,
     },
   }), [zoomedArea]);
 
@@ -343,31 +395,65 @@ const MapDisplay = ({
     if (xr?.[0] != null && yr?.[0] != null) onZoomedAreaChange?.({ x: xr, y: yr });
   }, [onZoomedAreaChange]);
 
+  // reusable panel renderer
   const aspectBox = { position: 'relative', width: '100%', paddingTop: '56.25%' };
   const aspectInner = {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(18,18,18,0.8)', borderRadius: 6, overflow: 'hidden',
     cursor: loading ? 'wait' : 'default',
   };
-  const title = {
+  const titleStyle = {
     position: 'absolute', top: 10, left: 0, width: '100%',
-    textAlign: 'center', fontSize: 19, color: 'white', pointerEvents: 'none', zIndex: 2,
+    textAlign: 'center', fontSize: 19, color: 'white',
+    pointerEvents: 'none', zIndex: 2,
   };
-  const subTitle = {
+  const subTitleStyle = {
     position: 'absolute', top: 40, left: 0, width: '100%',
-    textAlign: 'center', fontSize: 16, color: 'rgba(255,255,255,0.7)', pointerEvents: 'none', zIndex: 2,
-  }
+    textAlign: 'center', fontSize: 16, color: 'rgba(255,255,255,0.7)',
+    pointerEvents: 'none', zIndex: 2,
+  };
 
+  const renderPanel = (title, subtitle, plotData, extraChildren) => (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={aspectBox}>
+        <div style={aspectInner}>
+          <div style={titleStyle}>{title}</div>
+          <div style={subTitleStyle}>{subtitle}</div>
+          <Plot
+            data={plotData}
+            layout={sharedLayout}
+            useResizeHandler
+            style={{ width: '100%', height: '100%' }}
+            onRelayout={handleRelayout}
+            onDoubleClick={() => onZoomedAreaChange?.(null)}
+            config={{ responsive: true, displayModeBar: false }}
+          />
+          {extraChildren}
+          <ZoomHint visible={isZoomed} />
+        </div>
+      </div>
+    </div>
+  );
+
+  // build SD obs colorbar tick text
+  const sdTickVals = [0, 10, 25, 40, 50, 60, 75, 90, 100];
+  const sdTickText = sdTickVals.map(p => `${p}%`);
+
+  // render
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', flexDirection: isVertical ? 'column' : 'row', gap: 8 }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: isVertical ? 'column' : 'row',
+        gap: 8,
+      }}>
 
-        {/* Mean Map */}
+        {/* Mean panel */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={aspectBox}>
             <div style={aspectInner}>
-              <div style={title}>{fullTitle}</div>
-              <div style={subTitle}>{aboutMean}</div>
+              <div style={titleStyle}>{fullTitle}</div>
+              <div style={subTitleStyle}>{aboutMean}</div>
               <Plot
                 data={meanData.length ? [{
                   type: 'heatmap',
@@ -396,47 +482,67 @@ const MapDisplay = ({
                 config={{ responsive: true, displayModeBar: false }}
               />
               {hasHighSD && (
-                <HatchOverlay uncertaintyMask={uncertaintyMask} lats={lats} lons={lons} margin={MARGIN} zoomedArea={zoomedArea} />
+                <HatchOverlay
+                  uncertaintyMask={uncertaintyMask}
+                  lats={lats} lons={lons}
+                  margin={MARGIN}
+                  zoomedArea={zoomedArea}
+                />
               )}
               <ZoomHint visible={isZoomed} />
-              <ToggleStdButton showStd={showStd} onToggle={onToggleStd} />
+              {/* Toggle buttons rendered only on the mean panel */}
+              <PanelToggleBar panels={[
+                { id: 'sd', label: 'SD', active: showStd, onToggle: onToggleStd },
+                ...(hasObs ? [{ id: 'obs', label: 'Obs', active: showObs, onToggle: onToggleObs }] : []),
+              ]} />
             </div>
           </div>
         </div>
 
-        {/* Std Dev Map */}
-        {showStd && (
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={aspectBox}>
-              <div style={aspectInner}>
-                <div style={title}>{fullTitle} (Standard Deviation)</div>
-                <div style={subTitle}>{aboutSD}</div>
-                <Plot
-                  data={stdData.length ? [{
-                    type: 'heatmap',
-                    z: stdData,
-                    x: lons,
-                    y: lats,
-                    colorscale: SD_COLORSCALE,
-                    zmin: 0, zmax: 100,
-                    colorbar: {
-                      ...colorbarBase,
-                      tickvals: [0, 10, 25, 40, 50, 60, 75, 90, 100],
-                      ticktext: ['0%', '10%', '25%', '40%', '50%', '60%', '75%', '90%', '100%'],
-                    },
-                    hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>SD: %{z}%<extra></extra>',
-                  }] : []}
-                  layout={sharedLayout}
-                  useResizeHandler
-                  style={{ width: '100%', height: '100%' }}
-                  onRelayout={handleRelayout}
-                  onDoubleClick={() => onZoomedAreaChange?.(null)}
-                  config={{ responsive: true, displayModeBar: false }}
-                />
-                <ZoomHint visible={isZoomed} />
-              </div>
-            </div>
-          </div>
+        {/* SD panel */}
+        {showStd && renderPanel(
+          `${fullTitle} (Standard Deviation)`,
+          aboutSD,
+          stdData.length ? [{
+            type: 'heatmap',
+            z: stdData,
+            x: lons,
+            y: lats,
+            colorscale: SD_COLORSCALE,
+            zmin: 0, zmax: 100,
+            colorbar: {
+              ...colorbarBase,
+              tickvals: sdTickVals,
+              ticktext: sdTickText,
+            },
+            hovertemplate: 'Lon: %{x}<br>Lat: %{y}<br>SD: %{z}%<extra></extra>',
+          }] : [],
+          null,
+        )}
+
+        {/* Obs panel */}
+        {showObs && hasObs && renderPanel(
+          obsTitle,
+          obsSubtitle,
+          obsData.length ? [{
+            type: 'heatmap',
+            z: obsData,
+            x: lons,
+            y: lats,
+            colorscale: OBS_COLORSCALE,
+            zauto: false,
+            zmin: obsTicks.zmin,
+            zmax: obsTicks.zmax,
+            colorbar: {
+              ...colorbarBase,
+              tickvals: obsTicks.tickvals,
+              ticktext: obsTicks.ticktext,
+            },
+            hovertemplate: obsType === 'taxa'
+              ? 'Lon: %{x}<br>Lat: %{y}<br>Observed: %{z}<extra></extra>'
+              : 'Lon: %{x}<br>Lat: %{y}<br>Obs count: %{z}<extra></extra>',
+          }] : [],
+          null,
         )}
       </div>
 
