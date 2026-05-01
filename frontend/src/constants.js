@@ -80,6 +80,10 @@ export const DEFAULT_URLS = [
     {
         label: "Species",
         value: "https://data.up.ethz.ch/shared/Blueoview_data/species_output_full.nc"
+    },
+    {
+        label: "Taxa",
+        value: "https://data.up.ethz.ch/shared/Blueoview_data/taxa_output_full_v3.nc"
     }
 ];
 
