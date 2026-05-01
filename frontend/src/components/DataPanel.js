@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Alert, Typography, CircularProgress } from '@mui/material';
 import GlobeDisplay from './GlobeDisplay';
 import MapDisplay from './MapDisplay';
-import { monthNames } from '../constants';
+import { monthNames, aboutMean, aboutSD } from '../constants';
 import ControlPanel from './ControlPanel';
 
 const DataPanel = ({
@@ -114,6 +114,8 @@ const DataPanel = ({
                                 featureOptions={featureOptions}
                                 showStd={showStd}
                                 onToggleStd={() => setShowStd(v => !v)}
+                                subTitleMean={aboutMean}
+                                subTitleSD={aboutSD}
                             />
                         )}
                         {panel.view === 'globe' && (
@@ -125,6 +127,8 @@ const DataPanel = ({
                                 featureOptions={featureOptions}
                                 showStd={showStd}
                                 onToggleStd={() => setShowStd(v => !v)}
+                                subTitleMean={aboutMean}
+                                subTitleSD={aboutSD}
                             />
                         )}
                     </>

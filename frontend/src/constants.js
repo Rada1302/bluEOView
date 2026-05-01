@@ -1,5 +1,12 @@
 export const STD_THRESHOLD = 1.0;
 
+// Explanatory descriptions
+export const howGenerated = "This is how diversity / species were generated."
+
+export const aboutMean = "This is an explanation about mean."
+
+export const aboutSD = "This is an explanation about SD."
+
 export const stdColorscale = [
     [0.0, '#1a1a2e'],
     [0.2, '#e8f4f8'],

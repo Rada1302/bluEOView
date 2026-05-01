@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Plot from 'react-plotly.js';
 import {
+  aboutMean,
+  aboutSD,
   colors,
   EARTH_TEXTURE,
   SD_COLORSCALE
@@ -15,7 +17,7 @@ const axisBase = {
   showticklabels: false,
 };
 
-const MARGIN = { l: 20, r: 70, t: 50, b: 20 };
+const MARGIN = { l: 20, r: 70, t: 70, b: 20 };
 
 const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
   const canvasRef = useRef(null);
@@ -347,10 +349,14 @@ const MapDisplay = ({
     backgroundColor: 'rgba(18,18,18,0.8)', borderRadius: 6, overflow: 'hidden',
     cursor: loading ? 'wait' : 'default',
   };
-  const subLabel = {
+  const title = {
     position: 'absolute', top: 10, left: 0, width: '100%',
-    textAlign: 'center', fontSize: 16, color: 'white', pointerEvents: 'none', zIndex: 2,
+    textAlign: 'center', fontSize: 19, color: 'white', pointerEvents: 'none', zIndex: 2,
   };
+  const subTitle = {
+    position: 'absolute', top: 40, left: 0, width: '100%',
+    textAlign: 'center', fontSize: 16, color: 'rgba(255,255,255,0.7)', pointerEvents: 'none', zIndex: 2,
+  }
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -360,7 +366,8 @@ const MapDisplay = ({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={aspectBox}>
             <div style={aspectInner}>
-              <div style={subLabel}>{fullTitle}</div>
+              <div style={title}>{fullTitle}</div>
+              <div style={subTitle}>{aboutMean}</div>
               <Plot
                 data={meanData.length ? [{
                   type: 'heatmap',
@@ -402,7 +409,8 @@ const MapDisplay = ({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={aspectBox}>
               <div style={aspectInner}>
-                <div style={subLabel}>{fullTitle} (Standard Deviation)</div>
+                <div style={title}>{fullTitle} (Standard Deviation)</div>
+                <div style={subTitle}>{aboutSD}</div>
                 <Plot
                   data={stdData.length ? [{
                     type: 'heatmap',
