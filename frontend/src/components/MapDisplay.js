@@ -498,7 +498,7 @@ const MapDisplay = ({
 
         {/* SD panel */}
         {showStd && renderPanel(
-          `${fullTitle} (Standard Deviation)`,
+          `${fullTitle} Standard Deviation`,
           aboutSD,
           stdData.length ? [{
             type: 'heatmap',

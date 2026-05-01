@@ -307,8 +307,8 @@ const GlobeDisplay = ({
   );
 
   const obsTitle = obsType === 'taxa'
-    ? `${fullTitle} (Taxa Observations)`
-    : `${fullTitle} (Observation Density)`;
+    ? `${fullTitle} Observations`
+    : `${fullTitle} Observation Density`;
 
   // render
   return (
@@ -342,7 +342,7 @@ const GlobeDisplay = ({
           pointsData.std,
           d => d.color,
           sdLegend,
-          `${fullTitle} (Standard Deviation)`,
+          `${fullTitle} Standard Deviation`,
           stdDims,
           null,
         )}
