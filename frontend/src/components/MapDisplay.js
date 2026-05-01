@@ -3,6 +3,7 @@ import Plot from 'react-plotly.js';
 import {
   aboutMean,
   aboutSD,
+  aboutObs,
   colors,
   EARTH_TEXTURE,
   SD_COLORSCALE,
@@ -345,10 +346,6 @@ const MapDisplay = ({
     ? `${fullTitle} (Taxa Observations)`
     : `${fullTitle} (Observation Density)`;
 
-  const obsSubtitle = obsType === 'taxa'
-    ? 'Locations where this taxon was recorded'
-    : 'Number of observations used to compute diversity';
-
   // layout
   const isZoomed = zoomedArea != null;
 
@@ -523,7 +520,7 @@ const MapDisplay = ({
         {/* Obs panel */}
         {showObs && hasObs && renderPanel(
           obsTitle,
-          obsSubtitle,
+          aboutObs,
           obsData.length ? [{
             type: 'heatmap',
             z: obsData,

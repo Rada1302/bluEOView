@@ -7,6 +7,8 @@ export const aboutMean = "This is an explanation about mean."
 
 export const aboutSD = "This is an explanation about SD."
 
+export const aboutObs = "This is an explanation about observations."
+
 export const stdColorscale = [
     [0.0, '#1a1a2e'],
     [0.2, '#e8f4f8'],
@@ -100,7 +102,7 @@ export const MONTH_OPTIONS = [
     { value: 10, label: 'October' },
     { value: 11, label: 'November' },
     { value: 12, label: 'December' },
-    { value: 13, label: 'Annual Mean' },
+    { value: 13, label: 'Annual' },
 ];
 
 export const BlueCloudLogo = {
