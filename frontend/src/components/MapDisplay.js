@@ -343,8 +343,8 @@ const MapDisplay = ({
   }, [obsType, obsMax]);
 
   const obsTitle = obsType === 'taxa'
-    ? `${fullTitle} (Taxa Observations)`
-    : `${fullTitle} (Observation Density)`;
+    ? `${fullTitle} Observations`
+    : `${fullTitle} Observation Density`;
 
   // layout
   const isZoomed = zoomedArea != null;
