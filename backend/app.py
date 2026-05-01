@@ -86,6 +86,7 @@ def extract_metadata(ds):
     extra = {k: str(v).strip() for k, v in attrs.items() if k.lower() not in captured}
     if extra:
         meta["extra_attributes"] = extra
+    print(f"Metadata: {meta}")
     return meta
 
 

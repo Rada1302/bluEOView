@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button, Box } from '@mui/material';
 import ReferencesModal from './ReferencesModal';
 
-const ReferencesButton = ({ sx, ...buttonProps }) => {
+const ReferencesButton = ({ sx, metadata, ...buttonProps }) => {
   const [open, setOpen] = useState(false);
 
   const handleOpen = () => setOpen(true);
@@ -36,7 +36,7 @@ const ReferencesButton = ({ sx, ...buttonProps }) => {
       >
         References&nbsp;&amp;&nbsp;Data&nbsp;Courtesy
       </Button>
-      <ReferencesModal open={open} onClose={handleClose} />
+      <ReferencesModal open={open} onClose={handleClose} metadata={metadata} />
     </Box>
   );
 };

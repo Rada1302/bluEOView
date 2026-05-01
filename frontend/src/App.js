@@ -45,6 +45,7 @@ const App = () => {
   const [featureOptions, setFeatureOptions] = useState([]);
   const [featuresLoading, setFeaturesLoading] = useState(false);
   const [featuresError, setFeaturesError] = useState(null);
+  const [metaData, setMetaData] = useState([]);
 
   // Panel state
   const [panel, setPanel] = useState(() => ({ ...initialPanel }));
@@ -89,6 +90,7 @@ const App = () => {
           }));
           setFeatureOptions(options);
           setPanel(prev => ({ ...prev, feature: options[0].value }));
+          setMetaData(data.metadata);
         } else {
           setFeaturesError('No valid features found in this dataset.');
         }
@@ -173,7 +175,7 @@ const App = () => {
           </Typography>
         </Box>
 
-        <Box><ReferencesButton /></Box>
+        <Box><ReferencesButton metadata={metaData} /></Box>
 
       </Box>
 
