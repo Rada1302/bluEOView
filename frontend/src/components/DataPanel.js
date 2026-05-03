@@ -4,6 +4,7 @@ import GlobeDisplay from './GlobeDisplay';
 import MapDisplay from './MapDisplay';
 import { monthNames, aboutMean, aboutSD } from '../constants';
 import ControlPanel from './ControlPanel';
+import QualityPanel from './QualityPanel';
 
 const DataPanel = ({
     panel,
@@ -30,7 +31,6 @@ const DataPanel = ({
     const [showStd, setShowStd] = useState(false);
     const [showObs, setShowObs] = useState(false);
 
-    // Keep feature in sync when featureOptions change
     useEffect(() => {
         if (!featureOptions.length) {
             if (panel.feature !== null) setPanel(prev => ({ ...prev, feature: null }));
@@ -40,14 +40,10 @@ const DataPanel = ({
         if (!exists) setPanel(prev => ({ ...prev, feature: featureOptions[0].value }));
     }, [featureOptions, panel.feature, setPanel]);
 
-    // Reset obs panel when switching datasets (url changes)
-    useEffect(() => {
-        setShowObs(false);
-    }, [netcdfUrl]);
+    useEffect(() => { setShowObs(false); }, [netcdfUrl]);
 
     const isAnnual = panel.month === 13;
-    const currentFeatureLabel =
-        featureOptions.find(f => f.value === panel.feature)?.label ?? panel.feature ?? '';
+    const currentFeatureLabel = featureOptions.find(f => f.value === panel.feature)?.label ?? panel.feature ?? '';
     const fullTitle = `${currentFeatureLabel} ${isAnnual ? 'Annual' : 'in ' + monthNames[panel.month]}`;
 
     const handleMonthCommit = (val) => {
@@ -71,91 +67,70 @@ const DataPanel = ({
     };
 
     return (
-        <Box
-            sx={{
-                p: 2,
-                backgroundColor: 'rgba(0, 0, 0, 0.25)',
-                borderRadius: 1,
+        <Box sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.25)', borderRadius: 1, display: 'flex', flexDirection: 'column' }}>
+            {/* 50/50 Split Container */}
+            <Box sx={{
                 display: 'flex',
-                flexDirection: 'column',
-                position: 'relative',
-                zIndex: 'auto',
-            }}
-        >
-            {/* Control Panel */}
-            <Box sx={{ flex: '0 0 auto', mb: 2, alignItems: 'center' }}>
-                <ControlPanel
-                    feature={panel.feature}
-                    featureOptions={featureOptions}
-                    onFeatureChange={(e) => setPanel(prev => ({ ...prev, feature: e.target.value }))}
-                    openInfoModal={openInfoModal}
-                    month={panel.month}
-                    onMonthChange={handleMonthCommit}
-                    view={panel.view}
-                    onViewChange={(val) => setPanel(prev => ({ ...prev, view: val }))}
-                    netcdfUrl={netcdfUrlInput}
-                    setNetcdfUrl={setNetcdfUrlInput}
-                    selectedDefault={selectedDefault}
-                    setSelectedDefault={setSelectedDefault}
-                    handleLoad={handleLoad}
-                    featuresLoading={featuresLoading}
-                    featuresError={featuresError}
-                    allUrls={allUrls}
-                />
+                flexDirection: 'row',
+                gap: 2,
+                mb: 2,
+                width: '100%',
+                alignItems: 'stretch'
+            }}>
+                {/* Each panel wrapped in a flex: 1 box */}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <ControlPanel
+                        feature={panel.feature}
+                        featureOptions={featureOptions}
+                        onFeatureChange={(e) => setPanel(prev => ({ ...prev, feature: e.target.value }))}
+                        openInfoModal={openInfoModal}
+                        month={panel.month}
+                        onMonthChange={handleMonthCommit}
+                        view={panel.view}
+                        onViewChange={(val) => setPanel(prev => ({ ...prev, view: val }))}
+                        netcdfUrl={netcdfUrlInput}
+                        setNetcdfUrl={setNetcdfUrlInput}
+                        selectedDefault={selectedDefault}
+                        setSelectedDefault={setSelectedDefault}
+                        handleLoad={handleLoad}
+                        featuresLoading={featuresLoading}
+                        featuresError={featuresError}
+                        allUrls={allUrls}
+                    />
+                </Box>
+
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <QualityPanel
+                        netcdfUrl={netcdfUrlInput}
+                        obsType={panel.obsType}
+                    />
+                </Box>
             </Box>
 
             {/* Map / Globe display */}
-            <Box
-                sx={{
-                    flex: '1 1 auto',
-                    position: 'relative',
-                    width: '100%',
-                    minHeight: '400px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                }}
-            >
+            <Box sx={{ flex: '1 1 auto', position: 'relative', width: '100%', minHeight: '400px' }}>
                 {panel.feature ? (
                     <>
                         {panel.view === 'map' && (
                             <MapDisplay
                                 {...sharedDisplayProps}
                                 selectedArea={selectedArea}
-                                onZoomedAreaChange={(area) => {
-                                    setArea(area);
-                                    onSharedZoomChange?.(area);
-                                }}
+                                onZoomedAreaChange={(area) => { setArea(area); onSharedZoomChange?.(area); }}
                                 zoomedArea={sharedZoom}
                             />
                         )}
-                        {panel.view === 'globe' && (
-                            <GlobeDisplay
-                                {...sharedDisplayProps}
-                            />
-                        )}
+                        {panel.view === 'globe' && <GlobeDisplay {...sharedDisplayProps} />}
                     </>
                 ) : (
-                    <Box
-                        sx={{
-                            flex: 1,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            textAlign: 'center',
-                            p: 3,
-                        }}
-                    >
+                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', p: 3 }}>
                         {featuresLoading ? (
                             <>
                                 <CircularProgress color="primary" sx={{ mb: 2 }} />
-                                <Typography variant="h6" color="white">
-                                    Loading dataset features...
-                                </Typography>
+                                <Typography variant="h6" color="white">Loading dataset features...</Typography>
                             </>
                         ) : (
                             <Alert severity="error" sx={{ maxWidth: '600px' }}>
-                                {"File not found or not in the correct format: No valid features available in this dataset."}
+                                File not found or not in the correct format.
                             </Alert>
                         )}
                     </Box>

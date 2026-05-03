@@ -420,5 +420,121 @@ def diversity_metadata():
     )
 
 
+def decode_str(val):
+    """Safely decode bytes → str, strip whitespace."""
+    if isinstance(val, (bytes, np.bytes_)):
+        return val.decode("utf-8", errors="replace").strip()
+    return str(val).strip()
+
+
+@app.route("/api/diversity-qc", methods=["GET"])
+def diversity_qc():
+    file_url = request.args.get("file", type=str)
+    if not file_url:
+        return jsonify({"error": "Missing required parameter: file"}), 400
+
+    try:
+        dataset = get_dataset(file_url)
+    except Exception as e:
+        return jsonify({"error": f"Failed to load dataset: {e}"}), 500
+
+    ds = dataset["ds"]
+
+    # QC not available
+    if "qc_col" not in ds or "qc_rec" not in ds:
+        return jsonify({"available": False})
+
+    try:
+        qc_col = ds["qc_col"]
+        qc_rec = ds["qc_rec"]
+
+        col_dims = list(qc_col.dims)
+
+        target_dim = next(
+            (d for d in col_dims if "target" in d.lower() or "taxa" in d.lower()),
+            None,
+        )
+
+        if target_dim:
+            # select first target (safe default)
+            qc_col = qc_col.isel({target_dim: 0})
+            col_dims = list(qc_col.dims)
+            print(f"QC: reduced over target dim '{target_dim}' → dims now {col_dims}")
+
+        # now must be 2D
+        if len(col_dims) != 2:
+            raise ValueError(
+                f"qc_col must be 2-D after reduction, got dims: {col_dims}"
+            )
+
+        # Identify dims
+        alg_dim = next(
+            (d for d in col_dims if "alg" in d.lower() or "model" in d.lower()),
+            col_dims[0],
+        )
+
+        qcn_dim = next(
+            (
+                d
+                for d in col_dims
+                if "qc" in d.lower() or "name" in d.lower() or "crit" in d.lower()
+            ),
+            col_dims[1] if col_dims[1] != alg_dim else col_dims[0],
+        )
+
+        # Labels
+        if alg_dim in ds.coords:
+            alg_labels = [decode_str(v) for v in ds.coords[alg_dim].values]
+        else:
+            n_alg = qc_col.sizes[alg_dim]
+            alg_labels = [f"Algorithm {i+1}" for i in range(n_alg)]
+
+        if qcn_dim in ds.coords:
+            qc_name_labels = [decode_str(v) for v in ds.coords[qcn_dim].values]
+        else:
+            n_qc = qc_col.sizes[qcn_dim]
+            qc_name_labels = [f"Criterion {i+1}" for i in range(n_qc)]
+
+        # Colors
+        col_vals = qc_col.transpose(alg_dim, qcn_dim).load().values
+
+        colors = [
+            [decode_str(col_vals[i, j]) for j in range(col_vals.shape[1])]
+            for i in range(col_vals.shape[0])
+        ]
+
+        # Recommendations
+        rec_vals = qc_rec.load().values
+        recommendations = [decode_str(v) for v in rec_vals]
+
+        n_alg = len(alg_labels)
+
+        if len(recommendations) < n_alg:
+            recommendations += ["No recommendation available."] * (
+                n_alg - len(recommendations)
+            )
+
+        recommendations = recommendations[:n_alg]
+
+        print(
+            f"QC: {n_alg} algorithms × {len(qc_name_labels)} criteria "
+            f"| sample colors: {colors[0][:3] if colors else []}"
+        )
+
+        return jsonify(
+            {
+                "available": True,
+                "algorithms": alg_labels,
+                "qcNames": qc_name_labels,
+                "colors": colors,
+                "recommendations": recommendations,
+            }
+        )
+
+    except Exception as e:
+        print(f"QC extraction error: {e}")
+        return jsonify({"error": f"Failed to extract QC data: {e}"}), 500
+
+
 if __name__ == "__main__":
     app.run(debug=False, threaded=True)
