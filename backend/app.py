@@ -108,6 +108,22 @@ def drop_time(da, time_index):
     return da
 
 
+def detect_obs_type(ds):
+    """Return 'diversity' if obs values are strictly 0/1 (binary presence/absence),
+    'taxa' otherwise, and None if obs is not present."""
+    if "obs" not in ds:
+        return None
+    obs_vals = ds["obs"].values.astype(np.float64)
+    finite_obs = obs_vals[np.isfinite(obs_vals)]
+    if finite_obs.size == 0:
+        return None
+    unique_vals = np.unique(finite_obs)
+    is_binary = np.all(np.isin(unique_vals, [0.0, 1.0]))
+    obs_type = "diversity" if is_binary else "taxa"
+    print(f"obs unique vals sample: {unique_vals[:10]}, obs_type: {obs_type}")
+    return obs_type
+
+
 # dataset loader
 def get_dataset(file_url):
     with DATA_LOCK:
@@ -180,6 +196,9 @@ def get_dataset(file_url):
         )
         print(f"obs present: {has_obs}, has target dim: {obs_has_target_dim}")
 
+        # Determine obs_type by value content: binary (0/1) → diversity, else → taxa
+        obs_type = detect_obs_type(ds)
+
         # filter valid targets
         # A target is valid if it has at least one finite mean value at t=0.
         print("Filtering valid targets…")
@@ -243,6 +262,7 @@ def get_dataset(file_url):
             "metadata": metadata,
             "has_obs": has_obs,
             "obs_has_target_dim": obs_has_target_dim,
+            "obs_type": obs_type,
             "sd_global_max": sd_global_max,
             "obs_global_max": obs_global_max,
         }
@@ -301,12 +321,9 @@ def diversity_map():
         )
 
     # obs
-    # mean, sd, and obs all share the same "target" coordinate (assigned at load
-    # time from the same isel), so .sel(target=feature_key) on obs is guaranteed
-    # to return data for the same taxon as mean/sd.
     obs_2d = None
     obs_max = None
-    obs_type = None
+    obs_type = dataset["obs_type"]
 
     if dataset["has_obs"]:
         try:
@@ -314,7 +331,6 @@ def diversity_map():
             if dataset["obs_has_target_dim"]:
                 # shape: (target, [time,] lat, lon)
                 obs_slice = obs_var.sel(target=feature_key)
-                # do obs vary by month?
                 obs_slice = drop_time(obs_slice, time_index).load()
                 obs_arr = obs_slice.values.astype(np.float64)
                 finite_obs = obs_arr[np.isfinite(obs_arr)]
@@ -322,16 +338,14 @@ def diversity_map():
                     round(float(finite_obs.max()), 3) if finite_obs.size > 0 else None
                 )
                 obs_2d = slice_to_2d(obs_slice)
-                obs_type = "taxa"
                 print(
                     f"obs [{feature_key}]: cells={finite_obs.size} "
                     f"total={finite_obs.sum():.0f} max={obs_max}"
                 )
             else:
-                # shape: ([time,] lat, lon) diversity observation density
+                # shape: ([time,] lat, lon) — no target dimension
                 obs_slice = drop_time(obs_var, time_index).load()
                 obs_2d = slice_to_2d(obs_slice)
-                obs_type = "diversity"
                 obs_max = dataset["obs_global_max"]
         except Exception as e:
             print(f"obs extraction failed for {feature_key}: {e}")
@@ -368,11 +382,6 @@ def diversity_features():
     except Exception as e:
         return jsonify({"error": f"Failed to load dataset: {e}"}), 500
 
-    obs_type = (
-        "taxa"
-        if dataset["obs_has_target_dim"]
-        else "diversity" if dataset["has_obs"] else None
-    )
     return jsonify(
         {
             "features": [
@@ -385,7 +394,7 @@ def diversity_features():
             ],
             "metadata": dataset["metadata"],
             "hasObs": dataset["has_obs"],
-            "obsType": obs_type,
+            "obsType": dataset["obs_type"],
         }
     )
 
@@ -402,16 +411,11 @@ def diversity_metadata():
     except Exception as e:
         return jsonify({"error": f"Failed to load dataset: {e}"}), 500
 
-    obs_type = (
-        "taxa"
-        if dataset["obs_has_target_dim"]
-        else "diversity" if dataset["has_obs"] else None
-    )
     return jsonify(
         {
             "metadata": dataset["metadata"],
             "hasObs": dataset["has_obs"],
-            "obsType": obs_type,
+            "obsType": dataset["obs_type"],
         }
     )
 

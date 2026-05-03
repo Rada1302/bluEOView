@@ -11,7 +11,6 @@ import {
 } from '../constants';
 import { generateColorbarTicks } from '../utils';
 
-// colour scale for obs density / presence
 const OBS_COLORSCALE = [
   [0.00, '#ffffcc'],
   [0.10, '#ffeda0'],
@@ -21,7 +20,6 @@ const OBS_COLORSCALE = [
   [1.00, '#67000d'],
 ];
 
-// shared axis / layout constants
 const axisBase = {
   showgrid: false,
   zeroline: false,
@@ -31,8 +29,6 @@ const axisBase = {
 };
 
 const MARGIN = { l: 20, r: 70, t: 70, b: 20 };
-
-// sub-components
 
 const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
   const canvasRef = useRef(null);
@@ -133,7 +129,6 @@ const ZoomHint = ({ visible }) => (
   </div>
 );
 
-// SD & Obs buttons
 const PanelToggleBar = ({ panels }) => (
   <div style={{
     position: 'absolute', top: 10, right: 10, zIndex: 10,
@@ -180,7 +175,7 @@ const MapDisplay = ({
   const [stdData, setStdData] = useState([]);
   const [obsData, setObsData] = useState([]);
   const [obsMax, setObsMax] = useState(null);
-  const [obsType, setObsType] = useState(null); // "taxa" | "diversity" | null
+  const [obsType, setObsType] = useState(null); // "diversity" (binary 0/1) | "taxa" (continuous) | null
   const [hasObs, setHasObs] = useState(false);
   const [minValue, setMinValue] = useState(null);
   const [maxValue, setMaxValue] = useState(null);
@@ -201,7 +196,6 @@ const MapDisplay = ({
     return () => window.removeEventListener('resize', h);
   }, []);
 
-  // Mean colorscale (stepped)
   const colorscale = useMemo(() => {
     const n = colors.length;
     const stops = [];
@@ -229,8 +223,6 @@ const MapDisplay = ({
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
 
-        // SD normalisation
-        // Use sdGlobalMax (per-target, all-time max) for stable colour scaling.
         const sdGlobalMax = json.sdGlobalMax ?? json.sdMax ?? null;
         const rawSd = json.sd ?? [];
         const sdPct = sdGlobalMax > 0
@@ -245,8 +237,6 @@ const MapDisplay = ({
         setStdData(sdPct);
         setMinValue(json.minValue ?? null);
         setMaxValue(json.maxValue ?? null);
-
-        // obs
         setHasObs(json.hasObs ?? false);
         setObsType(json.obsType ?? null);
         setObsData(json.obs ?? []);
@@ -315,9 +305,9 @@ const MapDisplay = ({
     [meanData, uncertaintyMask]
   );
 
-  // obs colour bar ticks
+  // obs colorbar ticks:
   const obsTicks = useMemo(() => {
-    if (obsType === 'taxa') {
+    if (obsType === 'diversity') {
       return {
         tickvals: [0, 1],
         ticktext: ['Absent', 'Present'],
@@ -325,13 +315,12 @@ const MapDisplay = ({
         zmax: 1,
       };
     }
-    // diversity density
+    // taxa: continuous density
     const maxV = obsMax ?? 1;
     const step = Math.pow(10, Math.floor(Math.log10(maxV)) - 1);
     const ticks = [];
     for (let v = 0; v <= maxV; v += step) ticks.push(Math.round(v));
     if (ticks[ticks.length - 1] !== Math.round(maxV)) ticks.push(Math.round(maxV));
-    // cap to 6 labels
     const stride = Math.max(1, Math.ceil(ticks.length / 6));
     const filtered = ticks.filter((_, i) => i % stride === 0);
     return {
@@ -342,11 +331,10 @@ const MapDisplay = ({
     };
   }, [obsType, obsMax]);
 
-  const obsTitle = obsType === 'taxa'
+  const obsTitle = obsType === 'diversity'
     ? `${fullTitle} Observations`
     : `${fullTitle} Observation Density`;
 
-  // layout
   const isZoomed = zoomedArea != null;
 
   const colorbarBase = {
@@ -392,7 +380,6 @@ const MapDisplay = ({
     if (xr?.[0] != null && yr?.[0] != null) onZoomedAreaChange?.({ x: xr, y: yr });
   }, [onZoomedAreaChange]);
 
-  // reusable panel renderer
   const aspectBox = { position: 'relative', width: '100%', paddingTop: '56.25%' };
   const aspectInner = {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -432,11 +419,9 @@ const MapDisplay = ({
     </div>
   );
 
-  // build SD obs colorbar tick text
   const sdTickVals = [0, 10, 25, 40, 50, 60, 75, 90, 100];
   const sdTickText = sdTickVals.map(p => `${p}%`);
 
-  // render
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{
@@ -487,7 +472,6 @@ const MapDisplay = ({
                 />
               )}
               <ZoomHint visible={isZoomed} />
-              {/* Toggle buttons rendered only on the mean panel */}
               <PanelToggleBar panels={[
                 { id: 'sd', label: 'SD', active: showStd, onToggle: onToggleStd },
                 ...(hasObs ? [{ id: 'obs', label: 'Obs', active: showObs, onToggle: onToggleObs }] : []),
@@ -535,7 +519,8 @@ const MapDisplay = ({
               tickvals: obsTicks.tickvals,
               ticktext: obsTicks.ticktext,
             },
-            hovertemplate: obsType === 'taxa'
+            // diversity = presence/absence; taxa = continuous count
+            hovertemplate: obsType === 'diversity'
               ? 'Lon: %{x}<br>Lat: %{y}<br>Observed: %{z}<extra></extra>'
               : 'Lon: %{x}<br>Lat: %{y}<br>Obs count: %{z}<extra></extra>',
           }] : [],

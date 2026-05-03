@@ -13,7 +13,6 @@ const parseHex = hex => {
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 };
 
-// Generic interpolator
 const makeInterpolator = (scale) => (pct) => {
   const t = Math.max(0, Math.min(100, pct)) / 100;
   let lo = scale[0];
@@ -34,7 +33,6 @@ const makeInterpolator = (scale) => (pct) => {
 
 const interpolateSdColor = makeInterpolator(SD_COLORSCALE);
 
-// Yellow to red for obs density/presence
 const OBS_COLORSCALE_GLOBE = [
   [0.00, '#ffffcc'],
   [0.10, '#ffeda0'],
@@ -123,7 +121,7 @@ const GlobeDisplay = ({
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
-  }, [showStd, showObs]); // re-measure when panels appear/disappear
+  }, [showStd, showObs]);
 
   // fetch
   const fetchData = useCallback(async (month, feature, signal) => {
@@ -148,8 +146,6 @@ const GlobeDisplay = ({
       if (!res.ok) throw new Error(json?.error ?? `Server error ${res.status}`);
 
       const { lats, lons, mean, sd, obs, obsMax, obsType: oType, hasObs: hObs } = json;
-
-      // SD: normalise using sdGlobalMax (per-target, all-time stable max)
       const sdGlobalMax = json.sdGlobalMax ?? json.sdMax ?? null;
 
       const step = 3;
@@ -182,8 +178,9 @@ const GlobeDisplay = ({
           }
 
           if (hObs && obsVal !== null && obsVal !== undefined) {
-            // For density: normalise to 0-100; for taxa presence: 0 or 100
-            const obsPct = oType === 'taxa'
+            // "diversity" → binary presence/absence (values are 0 or 1)
+            // "taxa"      → continuous density, normalise against obsMax
+            const obsPct = oType === 'diversity'
               ? (obsVal > 0 ? 100 : 0)
               : (obsMax > 0 ? (obsVal / obsMax) * 100 : 0);
             obsPoints.push({ lat, lng: lon, obsPct, color: interpolateObsColor(obsPct) });
@@ -233,7 +230,7 @@ const GlobeDisplay = ({
   }, []);
 
   const obsLegend = useMemo(() => {
-    if (obsType === 'taxa') {
+    if (obsType === 'diversity') {
       return { colors: ['#ffffcc', '#67000d'], labels: ['Absent', 'Present'] };
     }
     const ticks = [0, 25, 50, 75, 100];
@@ -267,7 +264,6 @@ const GlobeDisplay = ({
     );
   };
 
-  // globe panel renderer
   const subLabel = {
     position: 'absolute', top: 10, left: 0, width: '100%',
     textAlign: 'center', fontSize: 17, color: 'white',
@@ -306,11 +302,10 @@ const GlobeDisplay = ({
     </div>
   );
 
-  const obsTitle = obsType === 'taxa'
+  const obsTitle = obsType === 'diversity'
     ? `${fullTitle} Observations`
     : `${fullTitle} Observation Density`;
 
-  // render
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{
