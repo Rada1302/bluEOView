@@ -63,7 +63,7 @@ export const generateColorbarTicks = (min, max, numBins) => {
 
     const range = max - min;
     const step = range / (numBins - 1);
-    const precision = range >= 10 ? 0 : range >= 1 ? 2 : 3;
+    const precision = range >= 10 ? 0 : 2;
 
     const tickvals = [];
     const ticktext = [];

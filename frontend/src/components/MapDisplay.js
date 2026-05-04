@@ -196,11 +196,6 @@ const PanelTitle = ({ title, loading, style }) => (
   </div>
 );
 
-const isSpeciesUrl = (netcdfUrl, feature) => {
-  const s = (netcdfUrl || feature || '').toLowerCase();
-  return s.includes('species') || s.includes('taxa');
-};
-
 const MapDisplay = ({
   mapData,
   onZoomedAreaChange,
@@ -248,11 +243,6 @@ const MapDisplay = ({
   }, []);
 
   const { tickvals, ticktext, finalZMin, finalZMax } = useMemo(() => {
-    const isSpecies = isSpeciesUrl('', fullTitle);
-    if (isSpecies) {
-      const vals = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-      return { tickvals: vals, ticktext: vals.map(v => v.toFixed(1)), finalZMin: 0, finalZMax: 1 };
-    }
     if (minValue == null || maxValue == null) {
       return { tickvals: [], ticktext: [], finalZMin: minValue, finalZMax: maxValue };
     }
