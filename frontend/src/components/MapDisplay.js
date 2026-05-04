@@ -8,7 +8,6 @@ import {
   EARTH_TEXTURE,
   SD_COLORSCALE,
   SD_THRESHOLD,
-  PanelTitle
 } from '../constants';
 import { generateColorbarTicks } from '../utils';
 
@@ -154,6 +153,46 @@ const PanelToggleBar = ({ panels }) => (
         {active ? `✕ Hide ${label}` : `+ Show ${label}`}
       </button>
     ))}
+  </div>
+);
+
+// Loading overlay with spinner shown over the existing figure while new data fetches
+const LoadingOverlay = ({ visible }) => (
+  <div style={{
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
+    opacity: visible ? 1 : 0,
+    pointerEvents: visible ? 'all' : 'none',
+    transition: 'opacity 0.2s ease',
+    zIndex: 20,
+    borderRadius: 6,
+  }}>
+    <div style={{
+      width: 40, height: 40,
+      border: '3px solid rgba(255,255,255,0.15)',
+      borderTop: '3px solid rgba(255,255,255,0.85)',
+      borderRadius: '50%',
+      animation: 'mapdisplay-spin 0.75s linear infinite',
+    }} />
+    <style>{`@keyframes mapdisplay-spin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
+
+// Title area: shows committed title with a small inline spinner while loading
+const PanelTitle = ({ title, loading, style }) => (
+  <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+    <span>{title}</span>
+    {loading && (
+      <div style={{
+        width: 14, height: 14, flexShrink: 0,
+        border: '2px solid rgba(255,255,255,0.2)',
+        borderTop: '2px solid rgba(255,255,255,0.85)',
+        borderRadius: '50%',
+        animation: 'mapdisplay-spin 0.75s linear infinite',
+      }} />
+    )}
   </div>
 );
 
@@ -359,6 +398,7 @@ const MapDisplay = ({
             config={{ responsive: true, displayModeBar: false }}
           />
           {extraChildren}
+          <LoadingOverlay visible={loading} />
           <ZoomHint visible={isZoomed && !loading} />
         </div>
       </div>
@@ -413,6 +453,7 @@ const MapDisplay = ({
                   zoomedArea={zoomedArea}
                 />
               )}
+              <LoadingOverlay visible={loading} />
               <ZoomHint visible={isZoomed && !loading} />
               <PanelToggleBar panels={[
                 { id: 'sd', label: 'SD', active: showStd, onToggle: onToggleStd },
