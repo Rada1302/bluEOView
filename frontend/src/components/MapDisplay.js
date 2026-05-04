@@ -8,6 +8,7 @@ import {
   EARTH_TEXTURE,
   SD_COLORSCALE,
   SD_THRESHOLD,
+  PanelTitle
 } from '../constants';
 import { generateColorbarTicks } from '../utils';
 
@@ -166,6 +167,7 @@ const MapDisplay = ({
   onZoomedAreaChange,
   zoomedArea,
   fullTitle,
+  titleLoading = false,
   showStd,
   onToggleStd,
   showObs,
@@ -345,7 +347,7 @@ const MapDisplay = ({
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={aspectBox}>
         <div style={aspectInner}>
-          <div style={titleStyle}>{title}</div>
+          <PanelTitle title={title} loading={titleLoading} style={titleStyle} />
           <div style={subTitleStyle}>{subtitle}</div>
           <Plot
             data={plotData}
@@ -357,7 +359,7 @@ const MapDisplay = ({
             config={{ responsive: true, displayModeBar: false }}
           />
           {extraChildren}
-          <ZoomHint visible={isZoomed} />
+          <ZoomHint visible={isZoomed && !loading} />
         </div>
       </div>
     </div>
@@ -374,7 +376,7 @@ const MapDisplay = ({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={aspectBox}>
             <div style={{ ...aspectInner, cursor: loading ? 'wait' : 'default' }}>
-              <div style={titleStyle}>{fullTitle}</div>
+              <PanelTitle title={fullTitle} loading={titleLoading} style={titleStyle} />
               <div style={subTitleStyle}>{aboutMean}</div>
               <Plot
                 data={meanData.length ? [{
@@ -411,7 +413,7 @@ const MapDisplay = ({
                   zoomedArea={zoomedArea}
                 />
               )}
-              <ZoomHint visible={isZoomed} />
+              <ZoomHint visible={isZoomed && !loading} />
               <PanelToggleBar panels={[
                 { id: 'sd', label: 'SD', active: showStd, onToggle: onToggleStd },
                 ...(hasObs ? [{ id: 'obs', label: 'Obs', active: showObs, onToggle: onToggleObs }] : []),

@@ -11,6 +11,22 @@ export const aboutObs = "This is an explanation about observations."
 
 export const aboutTrafficLight = "This is an explanation about traffic light."
 
+// Title area
+export const PanelTitle = ({ title, loading, style }) => (
+    <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <span>{title}</span>
+        {loading && (
+            <div style={{
+                width: 14, height: 14, flexShrink: 0,
+                border: '2px solid rgba(255,255,255,0.2)',
+                borderTop: '2px solid rgba(255,255,255,0.85)',
+                borderRadius: '50%',
+                animation: 'mapdisplay-spin 0.75s linear infinite',
+            }} />
+        )}
+    </div>
+);
+
 export const stdColorscale = [
     [0.0, '#1a1a2e'],
     [0.2, '#e8f4f8'],

@@ -35,6 +35,8 @@ const DataPanel = ({
     const [dataLoading, setDataLoading] = useState(false);
     const [dataError, setDataError] = useState(null);
 
+    const [committedTitle, setCommittedTitle] = useState('');
+
     useEffect(() => { setShowObs(false); }, [netcdfUrl]);
 
     useEffect(() => {
@@ -45,6 +47,11 @@ const DataPanel = ({
         const exists = featureOptions.some(f => f.value === panel.feature);
         if (!exists) setPanel(prev => ({ ...prev, feature: featureOptions[0].value }));
     }, [featureOptions, panel.feature, setPanel]);
+
+    const isAnnual = panel.month === 13;
+    const currentFeatureLabel =
+        featureOptions.find(f => f.value === panel.feature)?.label ?? panel.feature ?? '';
+    const pendingTitle = `${currentFeatureLabel} ${isAnnual ? 'Annual' : 'in ' + monthNames[panel.month]}`;
 
     useEffect(() => {
         if (!panel.feature || !netcdfUrl) return;
@@ -85,6 +92,8 @@ const DataPanel = ({
                     minValue: json.minValue ?? null,
                     maxValue: json.maxValue ?? null,
                 });
+
+                setCommittedTitle(pendingTitle);
             } catch (err) {
                 if (err.name !== 'AbortError') setDataError(err.message);
             } finally {
@@ -96,11 +105,6 @@ const DataPanel = ({
         return () => controller.abort();
     }, [debouncedMonth, panel.feature, netcdfUrl]);
 
-    const isAnnual = panel.month === 13;
-    const currentFeatureLabel =
-        featureOptions.find(f => f.value === panel.feature)?.label ?? panel.feature ?? '';
-    const fullTitle = `${currentFeatureLabel} ${isAnnual ? 'Annual' : 'in ' + monthNames[panel.month]}`;
-
     const handleMonthCommit = useCallback((val) => {
         setPanel(prev => ({ ...prev, month: val }));
         debouncedUpdateMonth(val);
@@ -108,7 +112,8 @@ const DataPanel = ({
     }, [setPanel, debouncedUpdateMonth, onMonthChange]);
 
     const sharedDisplayProps = {
-        fullTitle,
+        fullTitle: committedTitle,
+        titleLoading: dataLoading,
         featureOptions,
         mapData,
         showStd,
