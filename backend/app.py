@@ -6,6 +6,7 @@ from threading import Lock
 import requests
 import tempfile
 import os
+import re
 
 app = Flask(__name__)
 CORS(app)
@@ -421,7 +422,7 @@ def diversity_metadata():
 
 
 def decode_str(val):
-    """Safely decode bytes → str, strip whitespace."""
+    """Safely decode bytes to str, strip whitespace."""
     if isinstance(val, (bytes, np.bytes_)):
         return val.decode("utf-8", errors="replace").strip()
     return str(val).strip()
@@ -505,7 +506,7 @@ def diversity_qc():
 
         # Recommendations
         rec_vals = qc_rec.load().values
-        recommendations = [decode_str(v) for v in rec_vals]
+        recommendations = [decode_str(v).split("'")[1] + "." for v in rec_vals]
 
         n_alg = len(alg_labels)
 
