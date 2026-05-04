@@ -28,7 +28,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import AddIcon from '@mui/icons-material/Add';
-import { MONTH_OPTIONS, howGenerated } from '../constants';
+import { MONTH_OPTIONS, aboutGeneration } from '../constants';
 
 const glassSelect = {
   backgroundColor: 'rgba(255,255,255,0.12)',
@@ -216,7 +216,7 @@ const ControlPanel = ({
 
       <Collapse in={open}>
         <Box sx={{ px: 2, py: 1.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Typography sx={{ fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>{howGenerated}</Typography>
+          <Typography sx={{ fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>{aboutGeneration}</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <RowLabel>Source</RowLabel>
             <UrlControl netcdfUrl={netcdfUrl} selectedDefault={selectedDefault} triggerLoad={triggerLoad} allUrls={allUrls} />

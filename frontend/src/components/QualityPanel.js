@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { aboutTrafficLight } from '../constants';
 
 // Always-green panel for diversity datasets
 function DiversityQCBadge() {
@@ -173,7 +174,8 @@ export default function QualityPanel({ netcdfUrl, obsType, sx = {} }) {
             </Box>
 
             <Collapse in={open}>
-                <Box sx={{ px: 2, py: 2 }}>
+                <Box sx={{ px: 2, pb: 2 }}>
+                    <Typography sx={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', py: 2 }}>{aboutTrafficLight}</Typography>
                     {isDiversity ? <DiversityQCBadge /> : (
                         <>
                             {loading && (

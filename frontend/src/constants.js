@@ -1,13 +1,15 @@
 export const SD_THRESHOLD = 50;
 
 // Explanatory descriptions
-export const howGenerated = "This is how diversity / species were generated."
+export const aboutGeneration = "This is how diversity / species were generated."
 
 export const aboutMean = "This is an explanation about mean."
 
 export const aboutSD = "This is an explanation about SD."
 
 export const aboutObs = "This is an explanation about observations."
+
+export const aboutTrafficLight = "This is an explanation about traffic light."
 
 export const stdColorscale = [
     [0.0, '#1a1a2e'],
