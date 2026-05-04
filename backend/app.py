@@ -217,7 +217,10 @@ def get_dataset(file_url):
         t_labels = [raw_names[i] for i in orig_indices]
         ds = ds.assign_coords(target=("target", t_keys))
 
-        valid_targets = [{"key": k, "label": l} for k, l in zip(t_keys, t_labels)]
+        valid_targets = [
+            {"key": k, "label": l, "target_id": orig_idx}
+            for k, l, orig_idx in zip(t_keys, t_labels, orig_indices)
+        ]
         target_map = {t["key"]: t for t in valid_targets}
 
         print(f"Valid targets: {len(valid_targets)}")
@@ -390,6 +393,7 @@ def diversity_features():
                     "value": t["key"],
                     "label": t["label"].replace("_", " ").title(),
                     "description": f"Diversity metric: {t['label']}",
+                    "target_id": t["target_id"],
                 }
                 for t in dataset["targets"]
             ],
