@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Globe from 'react-globe.gl';
 import {
   generateColorStops,
@@ -7,7 +7,6 @@ import {
 } from '../utils';
 import { colors, EARTH_TEXTURE, SD_COLORSCALE, SD_THRESHOLD } from '../constants';
 
-// colour interpolators
 const parseHex = hex => {
   const h = hex.replace('#', '');
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
@@ -43,7 +42,6 @@ const OBS_COLORSCALE_GLOBE = [
 ];
 const interpolateObsColor = makeInterpolator(OBS_COLORSCALE_GLOBE);
 
-// sub-components
 const PanelToggleBar = ({ panels }) => (
   <div style={{
     position: 'absolute', top: 10, right: 10, zIndex: 10,
@@ -70,16 +68,15 @@ const PanelToggleBar = ({ panels }) => (
   </div>
 );
 
-// main component
 const GlobeDisplay = ({
-  month,
-  feature,
-  netcdfUrl,
+  mapData,
   fullTitle,
   showStd,
   onToggleStd,
   showObs,
   onToggleObs,
+  loading = false,
+  error = null,
 }) => {
   const meanContainerRef = useRef(null);
   const stdContainerRef = useRef(null);
@@ -92,21 +89,80 @@ const GlobeDisplay = ({
   const [stdDims, setStdDims] = useState({ width: 0, height: 0 });
   const [obsDims, setObsDims] = useState({ width: 0, height: 0 });
 
-  const [pointsData, setPointsData] = useState({ mean: [], std: [], obs: [] });
-  const [minValue, setMinValue] = useState(null);
-  const [maxValue, setMaxValue] = useState(null);
-  const [hasObs, setHasObs] = useState(false);
-  const [obsType, setObsType] = useState(null);
-  const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [isVertical, setIsVertical] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 900 : false
   );
 
-  const cacheRef = useRef({});
   const colorscale = useMemo(() => generateColorStops(colors), []);
 
-  // measure containers
+  const {
+    lats = [],
+    lons = [],
+    mean,
+    sdPct: sd,
+    obs,
+    obsMax = null,
+    obsType = null,
+    hasObs = false,
+    minValue = null,
+    maxValue = null,
+  } = mapData ?? {};
+
+  // Derive globe point arrays from mapData
+  const pointsData = useMemo(() => {
+    if (!mean?.length || !lats.length || !lons.length) {
+      return { mean: [], std: [], obs: [] };
+    }
+
+    const meanPoints = [];
+    const stdPoints = [];
+    const obsPoints = [];
+    const step = 3;
+
+    for (let li = 0; li < lats.length; li += step) {
+      const lat = lats[li];
+      const dataRow = lats.length - 1 - li;
+
+      for (let oi = 0; oi < lons.length; oi += step) {
+        const lon = lons[oi] > 180 ? lons[oi] - 360 : lons[oi];
+        const meanVal = mean?.[dataRow]?.[oi];
+        const sdPctVal = sd?.[dataRow]?.[oi] ?? 0;
+        const obsVal = obs?.[dataRow]?.[oi];
+
+        if (meanVal === null || meanVal === undefined) continue;
+
+        meanPoints.push({
+          lat,
+          lng: lon,
+          val: meanVal,
+          isUncertain: sdPctVal > SD_THRESHOLD,
+        });
+
+        if (sdPctVal !== null && sdPctVal !== undefined) {
+          stdPoints.push({
+            lat, lng: lon,
+            sdPct: sdPctVal,
+            color: interpolateSdColor(sdPctVal),
+          });
+        }
+
+        if (hasObs && obsVal !== null && obsVal !== undefined) {
+          const obsPct = obsType === 'diversity'
+            ? (obsVal > 0 ? 100 : 0)
+            : (obsMax > 0 ? (obsVal / obsMax) * 100 : 0);
+          obsPoints.push({
+            lat, lng: lon,
+            obsPct,
+            color: interpolateObsColor(obsPct),
+          });
+        }
+      }
+    }
+
+    return { mean: meanPoints, std: stdPoints, obs: obsPoints };
+  }, [lats, lons, mean, sd, obs, obsMax, obsType, hasObs]);
+
+  // Measure containers for Globe sizing
   useEffect(() => {
     const measure = () => {
       setIsVertical(window.innerWidth < 900);
@@ -123,100 +179,7 @@ const GlobeDisplay = ({
     return () => window.removeEventListener('resize', measure);
   }, [showStd, showObs]);
 
-  // fetch
-  const fetchData = useCallback(async (month, feature, signal) => {
-    if (!feature || !netcdfUrl) return;
-    const cacheKey = `${month}_${feature}_${netcdfUrl}`;
-    if (cacheRef.current[cacheKey]) {
-      const c = cacheRef.current[cacheKey];
-      setPointsData(c.pointsData);
-      setMinValue(c.minValue);
-      setMaxValue(c.maxValue);
-      setHasObs(c.hasObs);
-      setObsType(c.obsType);
-      setError(null);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams({ feature, timeIndex: month.toString(), file: netcdfUrl });
-      const res = await fetch(`/api/diversity-map?${params}`, { signal });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? `Server error ${res.status}`);
-
-      const { lats, lons, mean, sd, obs, obsMax, obsType: oType, hasObs: hObs } = json;
-      const sdGlobalMax = json.sdGlobalMax ?? json.sdMax ?? null;
-
-      const step = 3;
-      const meanPoints = [];
-      const stdPoints = [];
-      const obsPoints = [];
-
-      for (let li = 0; li < lats.length; li += step) {
-        const lat = lats[li];
-        const dataRow = lats.length - 1 - li;
-
-        for (let oi = 0; oi < lons.length; oi += step) {
-          const lon = lons[oi] > 180 ? lons[oi] - 360 : lons[oi];
-          const meanVal = mean?.[dataRow]?.[oi];
-          const sdVal = sd?.[dataRow]?.[oi];
-          const obsVal = obs?.[dataRow]?.[oi];
-
-          if (meanVal === null || meanVal === undefined) continue;
-
-          const sdPct = (sdGlobalMax > 0 && sdVal != null) ? (sdVal / sdGlobalMax) * 100 : 0;
-
-          meanPoints.push({
-            lat, lng: lon,
-            val: meanVal,
-            isUncertain: sdPct > SD_THRESHOLD,
-          });
-
-          if (sdVal !== null && sdVal !== undefined) {
-            stdPoints.push({ lat, lng: lon, sdPct, color: interpolateSdColor(sdPct) });
-          }
-
-          if (hObs && obsVal !== null && obsVal !== undefined) {
-            // "diversity" → binary presence/absence (values are 0 or 1)
-            // "taxa"      → continuous density, normalise against obsMax
-            const obsPct = oType === 'diversity'
-              ? (obsVal > 0 ? 100 : 0)
-              : (obsMax > 0 ? (obsVal / obsMax) * 100 : 0);
-            obsPoints.push({ lat, lng: lon, obsPct, color: interpolateObsColor(obsPct) });
-          }
-        }
-      }
-
-      const transformed = { mean: meanPoints, std: stdPoints, obs: obsPoints };
-      cacheRef.current[cacheKey] = {
-        pointsData: transformed,
-        minValue: json.minValue,
-        maxValue: json.maxValue,
-        hasObs: hObs ?? false,
-        obsType: oType ?? null,
-      };
-
-      setPointsData(transformed);
-      setMinValue(json.minValue);
-      setMaxValue(json.maxValue);
-      setHasObs(hObs ?? false);
-      setObsType(oType ?? null);
-      setError(null);
-    } catch (err) {
-      if (err.name !== 'AbortError') setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [netcdfUrl, colorscale]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchData(month, feature, controller.signal);
-    return () => controller.abort();
-  }, [month, feature, netcdfUrl, fetchData]);
-
-  // legends
+  // Legends
   const meanLegend = useMemo(
     () => minValue == null || maxValue == null
       ? null
@@ -237,7 +200,6 @@ const GlobeDisplay = ({
     return { colors: ticks.map(p => interpolateObsColor(p)), labels: ticks.map(p => `${p}%`) };
   }, [obsType]);
 
-  // legend renderer
   const renderLegend = (legendData) => {
     if (!legendData) return null;
     return (
@@ -278,7 +240,7 @@ const GlobeDisplay = ({
           style={{
             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
             backgroundColor: '#0a0a0a', borderRadius: 6, overflow: 'hidden',
-            cursor: isLoading ? 'wait' : 'default',
+            cursor: loading ? 'wait' : 'default',
           }}
         >
           <div style={subLabel}>{title}</div>
@@ -314,7 +276,6 @@ const GlobeDisplay = ({
         gap: 8,
         alignItems: 'stretch',
       }}>
-
         {/* Mean globe */}
         {renderGlobe(
           meanContainerRef, meanGlobeRef,

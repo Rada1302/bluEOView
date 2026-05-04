@@ -7,7 +7,7 @@ import {
   colors,
   EARTH_TEXTURE,
   SD_COLORSCALE,
-  SD_THRESHOLD
+  SD_THRESHOLD,
 } from '../constants';
 import { generateColorbarTicks } from '../utils';
 
@@ -156,11 +156,13 @@ const PanelToggleBar = ({ panels }) => (
   </div>
 );
 
-// main component
+const isSpeciesUrl = (netcdfUrl, feature) => {
+  const s = (netcdfUrl || feature || '').toLowerCase();
+  return s.includes('species') || s.includes('taxa');
+};
+
 const MapDisplay = ({
-  month,
-  feature,
-  netcdfUrl,
+  mapData,
   onZoomedAreaChange,
   zoomedArea,
   fullTitle,
@@ -168,33 +170,31 @@ const MapDisplay = ({
   onToggleStd,
   showObs,
   onToggleObs,
+  loading = false,
+  error = null,
 }) => {
-  const [lats, setLats] = useState([]);
-  const [lons, setLons] = useState([]);
-  const [meanData, setMeanData] = useState([]);
-  const [stdData, setStdData] = useState([]);
-  const [obsData, setObsData] = useState([]);
-  const [obsMax, setObsMax] = useState(null);
-  const [obsType, setObsType] = useState(null); // "diversity" (binary 0/1) | "taxa" (continuous) | null
-  const [hasObs, setHasObs] = useState(false);
-  const [minValue, setMinValue] = useState(null);
-  const [maxValue, setMaxValue] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [isVertical, setIsVertical] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 900 : false
   );
-
-  const isSpecies = useMemo(() => {
-    const s = (netcdfUrl || feature || '').toLowerCase();
-    return s.includes('species') || s.includes('taxa');
-  }, [netcdfUrl, feature]);
 
   useEffect(() => {
     const h = () => setIsVertical(window.innerWidth < 900);
     window.addEventListener('resize', h);
     return () => window.removeEventListener('resize', h);
   }, []);
+
+  const {
+    lats = [],
+    lons = [],
+    mean: meanData = [],
+    sdPct: stdData = [],
+    obs: obsData = [],
+    obsMax = null,
+    obsType = null,
+    hasObs = false,
+    minValue = null,
+    maxValue = null,
+  } = mapData ?? {};
 
   const colorscale = useMemo(() => {
     const n = colors.length;
@@ -206,56 +206,8 @@ const MapDisplay = ({
     return stops;
   }, []);
 
-  // fetch
-  useEffect(() => {
-    if (!feature || !netcdfUrl) return;
-    const controller = new AbortController();
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams({
-          feature,
-          timeIndex: month.toString(),
-          file: netcdfUrl,
-        });
-        const res = await fetch(`/api/diversity-map?${params}`, { signal: controller.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-
-        const sdGlobalMax = json.sdGlobalMax ?? json.sdMax ?? null;
-        const rawSd = json.sd ?? [];
-        const sdPct = sdGlobalMax > 0
-          ? rawSd.map(row =>
-            row.map(v => v === null ? null : Math.round(v / sdGlobalMax * 100 * 10) / 10)
-          )
-          : rawSd;
-
-        setLats(json.lats ?? []);
-        setLons(json.lons ?? []);
-        setMeanData(json.mean ?? []);
-        setStdData(sdPct);
-        setMinValue(json.minValue ?? null);
-        setMaxValue(json.maxValue ?? null);
-        setHasObs(json.hasObs ?? false);
-        setObsType(json.obsType ?? null);
-        setObsData(json.obs ?? []);
-        setObsMax(json.obsMax ?? null);
-
-        setError(null);
-      } catch (err) {
-        if (err.name !== 'AbortError') setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-    return () => controller.abort();
-  }, [month, feature, netcdfUrl]);
-
-  // derived data
   const { tickvals, ticktext, finalZMin, finalZMax } = useMemo(() => {
+    const isSpecies = isSpeciesUrl('', fullTitle);
     if (isSpecies) {
       const vals = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
       return { tickvals: vals, ticktext: vals.map(v => v.toFixed(1)), finalZMin: 0, finalZMax: 1 };
@@ -265,7 +217,7 @@ const MapDisplay = ({
     }
     const ticks = generateColorbarTicks(minValue, maxValue, colorscale.length);
     return { ...ticks, finalZMin: minValue, finalZMax: maxValue };
-  }, [isSpecies, minValue, maxValue, colorscale.length]);
+  }, [fullTitle, minValue, maxValue, colorscale.length]);
 
   const hasHighSD = useMemo(
     () => stdData.some(row => row.some(v => v !== null && v > SD_THRESHOLD)),
@@ -296,6 +248,7 @@ const MapDisplay = ({
     ),
     [meanData, uncertaintyMask]
   );
+
   const meanHoverBorderColor = useMemo(
     () => meanData.map((row, ri) =>
       row.map((_, ci) =>
@@ -305,17 +258,10 @@ const MapDisplay = ({
     [meanData, uncertaintyMask]
   );
 
-  // obs colorbar ticks:
   const obsTicks = useMemo(() => {
     if (obsType === 'diversity') {
-      return {
-        tickvals: [0, 1],
-        ticktext: ['Absent', 'Present'],
-        zmin: 0,
-        zmax: 1,
-      };
+      return { tickvals: [0, 1], ticktext: ['Absent', 'Present'], zmin: 0, zmax: 1 };
     }
-    // taxa: continuous density
     const maxV = obsMax ?? 1;
     const step = Math.pow(10, Math.floor(Math.log10(maxV)) - 1);
     const ticks = [];
@@ -323,12 +269,7 @@ const MapDisplay = ({
     if (ticks[ticks.length - 1] !== Math.round(maxV)) ticks.push(Math.round(maxV));
     const stride = Math.max(1, Math.ceil(ticks.length / 6));
     const filtered = ticks.filter((_, i) => i % stride === 0);
-    return {
-      tickvals: filtered,
-      ticktext: filtered.map(v => String(v)),
-      zmin: 0,
-      zmax: maxV,
-    };
+    return { tickvals: filtered, ticktext: filtered.map(v => String(v)), zmin: 0, zmax: maxV };
   }, [obsType, obsMax]);
 
   const obsTitle = obsType === 'diversity'
@@ -397,6 +338,9 @@ const MapDisplay = ({
     pointerEvents: 'none', zIndex: 2,
   };
 
+  const sdTickVals = [0, 10, 25, 40, 50, 60, 75, 90, 100];
+  const sdTickText = sdTickVals.map(p => `${p}%`);
+
   const renderPanel = (title, subtitle, plotData, extraChildren) => (
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={aspectBox}>
@@ -419,9 +363,6 @@ const MapDisplay = ({
     </div>
   );
 
-  const sdTickVals = [0, 10, 25, 40, 50, 60, 75, 90, 100];
-  const sdTickText = sdTickVals.map(p => `${p}%`);
-
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{
@@ -429,11 +370,10 @@ const MapDisplay = ({
         flexDirection: isVertical ? 'column' : 'row',
         gap: 8,
       }}>
-
         {/* Mean panel */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={aspectBox}>
-            <div style={aspectInner}>
+            <div style={{ ...aspectInner, cursor: loading ? 'wait' : 'default' }}>
               <div style={titleStyle}>{fullTitle}</div>
               <div style={subTitleStyle}>{aboutMean}</div>
               <Plot
@@ -519,7 +459,6 @@ const MapDisplay = ({
               tickvals: obsTicks.tickvals,
               ticktext: obsTicks.ticktext,
             },
-            // diversity = presence/absence; taxa = continuous count
             hovertemplate: obsType === 'diversity'
               ? 'Lon: %{x}<br>Lat: %{y}<br>Observed: %{z}<extra></extra>'
               : 'Lon: %{x}<br>Lat: %{y}<br>Obs count: %{z}<extra></extra>',
