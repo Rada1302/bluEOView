@@ -95,11 +95,11 @@ export const monthNames = {
 export const DEFAULT_URLS = [
     {
         label: "Diversity",
-        value: "https://data.up.ethz.ch/shared/Blueoview_data/with_obs_layer/diversity_output_full_v3.nc"
+        value: "https://data.d4science.net/dhCYs"
     },
     {
         label: "Taxa",
-        value: "https://data.up.ethz.ch/shared/Blueoview_data/with_obs_layer/taxa_output_full_v3.nc"
+        value: "https://data.d4science.net/SkBJN"
     }
 ];
 
