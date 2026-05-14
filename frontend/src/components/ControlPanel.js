@@ -127,7 +127,11 @@ const UrlControl = ({ netcdfUrl, selectedDefault, triggerLoad, allUrls }) => {
             if (!value || value === '') return <span style={{ opacity: 0.5 }}>Select a source…</span>;
             const found = sessionUrls.find(u => u.value === value);
             if (found && found.label !== found.value) return found.label;
-            return <span style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>{value}</span>;
+            return (
+              <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', direction: 'rtl', textAlign: 'left', fontFamily: 'monospace', fontSize: '0.85em' }}>
+                <bdi>{value}</bdi>
+              </span>
+            );
           }}
           onChange={handleSelectChange}
           MenuProps={menuProps}
