@@ -11,14 +11,6 @@ import {
 } from '../constants';
 import { generateColorbarTicks } from '../utils';
 
-const OBS_COLORSCALE = [
-  [0.00, '#ffffcc'],
-  [0.10, '#ffeda0'],
-  [0.25, '#feb24c'],
-  [0.50, '#f03b20'],
-  [0.75, '#bd0026'],
-  [1.00, '#67000d'],
-];
 
 const axisBase = {
   showgrid: false,
@@ -451,15 +443,18 @@ const MapDisplay = ({
             z: obsData,
             x: lons,
             y: lats,
-            colorscale: OBS_COLORSCALE,
+            colorscale: obsType === 'diversity' ? [[0, '#333333'], [1, '#fde725']] : colorscale,
+            showscale: obsType !== 'diversity',
             zauto: false,
             zmin: obsTicks.zmin,
             zmax: obsTicks.zmax,
-            colorbar: {
-              ...colorbarBase,
-              tickvals: obsTicks.tickvals,
-              ticktext: obsTicks.ticktext,
-            },
+            ...(obsType !== 'diversity' && {
+              colorbar: {
+                ...colorbarBase,
+                tickvals: obsTicks.tickvals,
+                ticktext: obsTicks.ticktext,
+              },
+            }),
             hovertemplate: obsType === 'diversity'
               ? 'Lon: %{x}<br>Lat: %{y}<br>Observed: %{z}<extra></extra>'
               : 'Lon: %{x}<br>Lat: %{y}<br>Obs count: %{z}<extra></extra>',

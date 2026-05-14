@@ -32,16 +32,6 @@ const makeInterpolator = (scale) => (pct) => {
 
 const interpolateSdColor = makeInterpolator(SD_COLORSCALE);
 
-const OBS_COLORSCALE_GLOBE = [
-  [0.00, '#ffffcc'],
-  [0.10, '#ffeda0'],
-  [0.25, '#feb24c'],
-  [0.50, '#f03b20'],
-  [0.75, '#bd0026'],
-  [1.00, '#67000d'],
-];
-const interpolateObsColor = makeInterpolator(OBS_COLORSCALE_GLOBE);
-
 
 const GlobeDisplay = ({
   mapData,
@@ -120,20 +110,16 @@ const GlobeDisplay = ({
         }
 
         if (hasObs && obsVal !== null && obsVal !== undefined) {
-          const obsPct = obsType === 'diversity'
-            ? (obsVal > 0 ? 100 : 0)
-            : (obsMax > 0 ? (obsVal / obsMax) * 100 : 0);
-          obsPoints.push({
-            lat, lng: lon,
-            obsPct,
-            color: interpolateObsColor(obsPct),
-          });
+          const color = obsType === 'diversity'
+            ? '#fde725'
+            : getInterpolatedColorFromValue(obsVal, 0, obsMax ?? 1, colorscale);
+          obsPoints.push({ lat, lng: lon, color });
         }
       }
     }
 
     return { mean: meanPoints, std: stdPoints, obs: obsPoints };
-  }, [lats, lons, mean, sd, obs, obsMax, obsType, hasObs]);
+  }, [lats, lons, mean, sd, obs, obsMax, obsType, hasObs, colorscale]);
 
   // Measure containers for Globe sizing
   useEffect(() => {
@@ -166,14 +152,11 @@ const GlobeDisplay = ({
   }, []);
 
   const obsLegend = useMemo(() => {
-    if (obsType === 'diversity') {
-      return { colors: ['#ffffcc', '#67000d'], labels: ['Absent', 'Present'] };
-    }
-    const ticks = [0, 25, 50, 75, 100];
-    return { colors: ticks.map(p => interpolateObsColor(p)), labels: ticks.map(p => `${p}%`) };
-  }, [obsType]);
+    if (obsType !== 'density' || obsMax == null) return null;
+    return getLegendFromColorscale(colorscale, 0, obsMax);
+  }, [obsType, obsMax, colorscale]);
 
-  const renderLegend = (legendData) => {
+const renderLegend = (legendData) => {
     if (!legendData) return null;
     return (
       <div style={{
