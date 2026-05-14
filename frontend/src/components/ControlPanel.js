@@ -152,21 +152,18 @@ const UrlControl = ({ netcdfUrl, selectedDefault, triggerLoad, allUrls }) => {
       <Dialog
         open={dialogOpen}
         onClose={handleCancelNew}
-        PaperProps={{
-          sx: {
-            backgroundColor: 'rgba(20, 20, 20, 0.95)',
-            backdropFilter: 'blur(16px)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            borderRadius: 2,
-            minWidth: 420,
+        maxWidth="sm"
+        fullWidth
+        sx={{
+          '& .MuiPaper-root': {
+            backgroundColor: 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(4px)',
           },
         }}
       >
-        <DialogTitle sx={{ color: '#fff', pb: 1, fontSize: '1rem', fontWeight: 600 }}>
-          Add new source
-        </DialogTitle>
-        <DialogContent sx={{ pb: 1 }}>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 2 }}>
+        <DialogTitle>Add new source</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" sx={{ mb: 2 }}>
             Enter a URL to a NetCDF file.
           </Typography>
           <TextField
@@ -176,32 +173,15 @@ const UrlControl = ({ netcdfUrl, selectedDefault, triggerLoad, allUrls }) => {
             value={draftUrl}
             onChange={(e) => setDraftUrl(e.target.value)}
             placeholder="https://…"
-            sx={{
-              '& .MuiInputBase-root': {
-                backgroundColor: 'rgba(255,255,255,0.08)',
-                borderRadius: 1.5,
-                border: '1px solid rgba(255,255,255,0.2)',
-                color: '#fff',
-                fontFamily: 'monospace',
-              },
-              '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-            }}
+            inputProps={{ style: { fontFamily: 'monospace' } }}
           />
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-          <Button size="small" onClick={handleCancelNew} sx={{ color: 'rgba(255,255,255,0.5)' }}>
-            Cancel
-          </Button>
+        <DialogActions>
+          <Button onClick={handleCancelNew}>Cancel</Button>
           <Button
-            size="small"
             variant="contained"
             onClick={handleConfirmNew}
             disabled={!draftUrl.trim()}
-            sx={{
-              backgroundColor: 'rgba(255,255,255,0.15)',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.3)',
-            }}
           >
             Load
           </Button>
