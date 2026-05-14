@@ -171,7 +171,7 @@ const App = () => {
             CEPHALOView
           </Typography>
           <Typography variant="h6" sx={{ fontSize: '1.25rem', color: 'white', mt: 0.5 }}>
-            Visualisation of CEPHALOPOD
+            Visualisation of <img src="/assets/cephalopod_logo.png" alt="C" style={{ height: '1.2em', verticalAlign: 'middle' }} />EPHALOPOD
           </Typography>
         </Box>
 
