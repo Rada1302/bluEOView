@@ -34,7 +34,7 @@ const ReferencesButton = ({ sx, metadata, ...buttonProps }) => {
         }}
         {...buttonProps}
       >
-        References&nbsp;&amp;&nbsp;Data&nbsp;Courtesy
+        About
       </Button>
       <ReferencesModal open={open} onClose={handleClose} metadata={metadata} />
     </Box>
