@@ -125,7 +125,7 @@ export const BlueCloudLogo = {
     href: 'https://blue-cloud.org',
 }
 
-export const EARTH_TEXTURE = "//unpkg.com/three-globe/example/img/earth-blue-marble.jpg";
+export const EARTH_TEXTURE = "//unpkg.com/three-globe/example/img/earth-day.jpg";
 
 export const logos = [
     {
