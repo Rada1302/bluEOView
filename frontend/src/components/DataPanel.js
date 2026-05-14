@@ -117,9 +117,7 @@ const DataPanel = ({
         featureOptions,
         mapData,
         showStd,
-        onToggleStd: () => setShowStd(v => !v),
         showObs,
-        onToggleObs: () => setShowObs(v => !v),
         subTitleMean: aboutMean,
         subTitleSD: aboutSD,
         loading: dataLoading,
@@ -154,6 +152,11 @@ const DataPanel = ({
                         featuresLoading={featuresLoading}
                         featuresError={featuresError}
                         allUrls={allUrls}
+                        showStd={showStd}
+                        onToggleStd={() => setShowStd(v => !v)}
+                        showObs={showObs}
+                        onToggleObs={() => setShowObs(v => !v)}
+                        hasObs={mapData?.hasObs ?? false}
                     />
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>

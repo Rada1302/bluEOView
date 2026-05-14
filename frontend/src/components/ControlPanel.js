@@ -214,6 +214,9 @@ const ControlPanel = ({
   view, onViewChange,
   netcdfUrl, setNetcdfUrl, selectedDefault, setSelectedDefault,
   handleLoad, featuresLoading, featuresError, allUrls = [],
+  showStd = false, onToggleStd,
+  showObs = false, onToggleObs,
+  hasObs = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(true);
@@ -412,6 +415,49 @@ const ControlPanel = ({
               >
                 {currentMonthLabel}
               </Typography>
+            </Box>
+          </Box>
+
+          {/* Show SD / Show Obs */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <RowLabel>Show</RowLabel>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                size="small"
+                onClick={onToggleStd}
+                variant="outlined"
+                sx={{
+                  color: '#fff',
+                  borderColor: 'rgba(255,255,255,0.25)',
+                  backgroundColor: showStd ? 'rgba(60,80,120,0.85)' : 'rgba(30,30,30,0.75)',
+                  backdropFilter: 'blur(4px)',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  '&:hover': { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: showStd ? 'rgba(70,90,140,0.9)' : 'rgba(50,50,50,0.85)' },
+                }}
+              >
+                {showStd ? '✕ Hide SD' : '+ Show SD'}
+              </Button>
+              {hasObs && (
+                <Button
+                  size="small"
+                  onClick={onToggleObs}
+                  variant="outlined"
+                  sx={{
+                    color: '#fff',
+                    borderColor: 'rgba(255,255,255,0.25)',
+                    backgroundColor: showObs ? 'rgba(60,80,120,0.85)' : 'rgba(30,30,30,0.75)',
+                    backdropFilter: 'blur(4px)',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: '0.04em',
+                    '&:hover': { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: showObs ? 'rgba(70,90,140,0.9)' : 'rgba(50,50,50,0.85)' },
+                  }}
+                >
+                  {showObs ? '✕ Hide Obs' : '+ Show Obs'}
+                </Button>
+              )}
             </Box>
           </Box>
         </Box>

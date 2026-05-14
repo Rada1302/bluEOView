@@ -129,32 +129,6 @@ const ZoomHint = ({ visible }) => (
   </div>
 );
 
-const PanelToggleBar = ({ panels }) => (
-  <div style={{
-    position: 'absolute', top: 10, right: 10, zIndex: 10,
-    display: 'flex', gap: 6,
-  }}>
-    {panels.map(({ id, label, active, onToggle }) => (
-      <button
-        key={id}
-        onClick={onToggle}
-        style={{
-          padding: '4px 10px',
-          fontSize: 11, fontWeight: 600,
-          letterSpacing: '0.04em',
-          borderRadius: 4,
-          border: '1px solid rgba(255,255,255,0.25)',
-          backgroundColor: active ? 'rgba(60,80,120,0.85)' : 'rgba(30,30,30,0.75)',
-          color: 'white', cursor: 'pointer',
-          backdropFilter: 'blur(4px)',
-          transition: 'all 0.2s ease',
-        }}
-      >
-        {active ? `✕ Hide ${label}` : `+ Show ${label}`}
-      </button>
-    ))}
-  </div>
-);
 
 // Loading overlay with spinner shown over the existing figure while new data fetches
 const LoadingOverlay = ({ visible }) => (
@@ -203,9 +177,7 @@ const MapDisplay = ({
   fullTitle,
   titleLoading = false,
   showStd,
-  onToggleStd,
   showObs,
-  onToggleObs,
   loading = false,
   error = null,
 }) => {
@@ -445,10 +417,6 @@ const MapDisplay = ({
               )}
               <LoadingOverlay visible={loading} />
               <ZoomHint visible={isZoomed && !loading} />
-              <PanelToggleBar panels={[
-                { id: 'sd', label: 'SD', active: showStd, onToggle: onToggleStd },
-                ...(hasObs ? [{ id: 'obs', label: 'Obs', active: showObs, onToggle: onToggleObs }] : []),
-              ]} />
             </div>
           </div>
         </div>
