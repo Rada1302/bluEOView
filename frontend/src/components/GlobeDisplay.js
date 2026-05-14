@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Globe from 'react-globe.gl';
 import {
   generateColorStops,
   getInterpolatedColorFromValue,
   getLegendFromColorscale,
 } from '../utils';
-import { colors, EARTH_TEXTURE, SD_COLORSCALE, SD_THRESHOLD } from '../constants';
+import { aboutMean, aboutSD, aboutObs, colors, EARTH_TEXTURE, PanelTitle, SD_COLORSCALE, SD_THRESHOLD } from '../constants';
 
 const parseHex = hex => {
   const h = hex.replace('#', '');
@@ -32,6 +32,28 @@ const makeInterpolator = (scale) => (pct) => {
 
 const interpolateSdColor = makeInterpolator(SD_COLORSCALE);
 
+const LoadingOverlay = ({ visible }) => (
+  <div style={{
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
+    opacity: visible ? 1 : 0,
+    pointerEvents: visible ? 'all' : 'none',
+    transition: 'opacity 0.2s ease',
+    zIndex: 20,
+    borderRadius: 6,
+  }}>
+    <div style={{
+      width: 40, height: 40,
+      border: '3px solid rgba(255,255,255,0.15)',
+      borderTop: '3px solid rgba(255,255,255,0.85)',
+      borderRadius: '50%',
+      animation: 'mapdisplay-spin 0.75s linear infinite',
+    }} />
+    <style>{`@keyframes mapdisplay-spin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
 
 const GlobeDisplay = ({
   mapData,
@@ -39,6 +61,7 @@ const GlobeDisplay = ({
   showStd,
   showObs,
   loading = false,
+  titleLoading = false,
   error = null,
 }) => {
   const meanContainerRef = useRef(null);
@@ -71,7 +94,6 @@ const GlobeDisplay = ({
     maxValue = null,
   } = mapData ?? {};
 
-  // Derive globe point arrays from mapData
   const pointsData = useMemo(() => {
     if (!mean?.length || !lats.length || !lons.length) {
       return { mean: [], std: [], obs: [] };
@@ -121,7 +143,6 @@ const GlobeDisplay = ({
     return { mean: meanPoints, std: stdPoints, obs: obsPoints };
   }, [lats, lons, mean, sd, obs, obsMax, obsType, hasObs, colorscale]);
 
-  // Measure containers for Globe sizing
   useEffect(() => {
     const measure = () => {
       setIsVertical(window.innerWidth < 900);
@@ -138,7 +159,6 @@ const GlobeDisplay = ({
     return () => window.removeEventListener('resize', measure);
   }, [showStd, showObs]);
 
-  // Legends
   const meanLegend = useMemo(
     () => minValue == null || maxValue == null
       ? null
@@ -152,11 +172,11 @@ const GlobeDisplay = ({
   }, []);
 
   const obsLegend = useMemo(() => {
-    if (obsType !== 'density' || obsMax == null) return null;
+    if (obsType === 'diversity' || obsMax == null) return null;
     return getLegendFromColorscale(colorscale, 0, obsMax);
   }, [obsType, obsMax, colorscale]);
 
-const renderLegend = (legendData) => {
+  const renderLegend = (legendData) => {
     if (!legendData) return null;
     return (
       <div style={{
@@ -182,13 +202,19 @@ const renderLegend = (legendData) => {
     );
   };
 
-  const subLabel = {
+  const titleStyle = {
     position: 'absolute', top: 10, left: 0, width: '100%',
-    textAlign: 'center', fontSize: 17, color: 'white',
+    textAlign: 'center', fontSize: 19, color: 'white',
     pointerEvents: 'none', zIndex: 5,
   };
 
-  const renderGlobe = (containerRef, globeRef, data, colorFn, legend, title, dims, controls) => (
+  const subTitleStyle = {
+    position: 'absolute', top: 40, left: 0, width: '100%',
+    textAlign: 'center', fontSize: 16, color: 'rgba(255,255,255,0.7)',
+    pointerEvents: 'none', zIndex: 5,
+  };
+
+  const renderGlobe = (containerRef, globeRef, data, colorFn, legend, title, subtitle, dims, controls) => (
     <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%' }}>
         <div
@@ -199,7 +225,8 @@ const renderLegend = (legendData) => {
             cursor: loading ? 'wait' : 'default',
           }}
         >
-          <div style={subLabel}>{title}</div>
+          <PanelTitle title={title} loading={titleLoading} style={titleStyle} />
+          <div style={subTitleStyle}>{subtitle}</div>
           <Globe
             ref={globeRef}
             width={dims.width}
@@ -215,6 +242,7 @@ const renderLegend = (legendData) => {
           />
           {renderLegend(legend)}
           {controls}
+          <LoadingOverlay visible={loading} />
         </div>
       </div>
     </div>
@@ -241,6 +269,7 @@ const renderLegend = (legendData) => {
             : getInterpolatedColorFromValue(d.val, minValue, maxValue, colorscale),
           meanLegend,
           fullTitle,
+          aboutMean,
           meanDims,
           null,
         )}
@@ -252,6 +281,7 @@ const renderLegend = (legendData) => {
           d => d.color,
           sdLegend,
           `${fullTitle} Standard Deviation`,
+          aboutSD,
           stdDims,
           null,
         )}
@@ -263,6 +293,7 @@ const renderLegend = (legendData) => {
           d => d.color,
           obsLegend,
           obsTitle,
+          aboutObs,
           obsDims,
           null,
         )}
