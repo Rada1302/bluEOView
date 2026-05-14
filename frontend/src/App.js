@@ -141,7 +141,7 @@ const App = () => {
           textAlign: 'center',
         }}
       >
-        <Box sx={{ position: 'absolute', top: 25, left: 8, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+        <Box sx={{ position: 'absolute', top: 25, left: 8, display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'flex-start' }}>
           <Paper
             component="a"
             href={BlueCloudLogo.href}
@@ -193,7 +193,7 @@ const App = () => {
         flexGrow: 1, display: 'flex', flexDirection: 'row', gap: 1, px: 1,
         '@media (max-width: 1000px)': { flexDirection: 'column' }
       }}>
-        <Box sx={{ flexGrow: 1, minWidth: 500 }}>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <DataPanel
             panel={panel}
             setPanel={setPanel}

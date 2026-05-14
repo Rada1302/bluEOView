@@ -128,7 +128,7 @@ const DataPanel = ({
         <Box sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.25)', borderRadius: 1, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{
                 display: 'flex',
-                flexDirection: 'row',
+                flexDirection: { xs: 'column', md: 'column', lg: 'row' },
                 gap: 2,
                 mb: 2,
                 width: '100%',
