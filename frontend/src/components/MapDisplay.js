@@ -28,6 +28,7 @@ const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !uncertaintyMask.length) return;
+    // Canvas covers only the plot area, so W/H are already the plot dimensions
     const W = canvas.offsetWidth;
     const H = canvas.offsetHeight;
     canvas.width = W;
@@ -35,8 +36,6 @@ const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, W, H);
 
-    const plotW = W - margin.l - margin.r;
-    const plotH = H - margin.t - margin.b;
     const nRows = uncertaintyMask.length;
     const nCols = uncertaintyMask[0]?.length ?? 0;
     if (!nRows || !nCols) return;
@@ -49,8 +48,9 @@ const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
     const lonRange = lonMax - lonMin;
     const latRange = latAtBotPx - latAtTopPx;
 
-    const lonToX = lon => margin.l + ((lon - lonMin) / lonRange) * plotW;
-    const latToY = lat => margin.t + ((lat - latAtTopPx) / latRange) * plotH;
+    // Coordinates are relative to the plot area (no margin offset needed)
+    const lonToX = lon => ((lon - lonMin) / lonRange) * W;
+    const latToY = lat => ((lat - latAtTopPx) / latRange) * H;
 
     const cellLonHalf = lons.length > 1 ? Math.abs(lons[1] - lons[0]) / 2 : 0;
     const cellLatHalf = lats.length > 1 ? Math.abs(lats[1] - lats[0]) / 2 : 0;
@@ -93,14 +93,18 @@ const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
   }, [uncertaintyMask, lats, lons, margin, zoomedArea]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: 'absolute', top: 0, left: 0,
-        width: '100%', height: '100%',
-        pointerEvents: 'none', zIndex: 3,
-      }}
-    />
+    // Wrapper is inset to the plot area only, so the canvas can never reach the colorbar
+    <div style={{
+      position: 'absolute',
+      top: margin.t, left: margin.l, right: margin.r, bottom: margin.b,
+      pointerEvents: 'none', zIndex: 3,
+      overflow: 'hidden',
+    }}>
+      <canvas
+        ref={canvasRef}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+      />
+    </div>
   );
 };
 
