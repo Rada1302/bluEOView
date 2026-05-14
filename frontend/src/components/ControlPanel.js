@@ -344,6 +344,7 @@ const ControlPanel = ({
                       fullWidth
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
