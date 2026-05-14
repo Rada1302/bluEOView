@@ -6,7 +6,7 @@ import InfoModal from './components/InfoModal';
 import debounce from 'lodash/debounce';
 import './App.css';
 import { Box, Typography, Divider } from '@mui/material';
-import { BlueCloudLogo, DEFAULT_URLS } from './constants';
+import { BlueCloudLogo, DEFAULT_URLS, welcomeShortText, welcomeLongText } from './constants';
 import { Paper, Button } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
@@ -17,6 +17,10 @@ const App = () => {
     view: 'map',
     feature: null,
   };
+
+  const [welcomeOpen, setWelcomeOpen] = useState(
+    !localStorage.getItem('hideProjectExplanation')
+  );
 
   const [infoModalOpen, setInfoModalOpen] = useState(false);
   const [infoModalShortText, setInfoModalShortText] = useState('');
@@ -180,6 +184,16 @@ const App = () => {
       </Box>
 
       <Divider sx={{ bgcolor: 'rgba(255,255,255,0.3)', mt: 1, mb: 2 }} />
+
+      <InfoModal
+        open={welcomeOpen}
+        onClose={() => setWelcomeOpen(false)}
+        title="Welcome to CEPHALOView"
+        shortText={welcomeShortText}
+        longText={welcomeLongText}
+        buttonText="Get Started"
+        showDontShowAgain
+      />
 
       <InfoModal
         open={infoModalOpen}
