@@ -108,6 +108,7 @@ const HatchOverlay = ({ uncertaintyMask, lats, lons, margin, zoomedArea }) => {
   );
 };
 
+
 const ZoomHint = ({ visible }) => (
   <div style={{
     position: 'absolute', bottom: 15, left: '50%',
@@ -124,7 +125,6 @@ const ZoomHint = ({ visible }) => (
     <span>Double-click to reset zoom</span>
   </div>
 );
-
 
 // Loading overlay with spinner shown over the existing figure while new data fetches
 const LoadingOverlay = ({ visible }) => (
@@ -353,7 +353,7 @@ const MapDisplay = ({
             style={{ width: '100%', height: '100%' }}
             onRelayout={handleRelayout}
             onDoubleClick={() => onZoomedAreaChange?.(null)}
-            config={{ responsive: true, displayModeBar: false }}
+            config={{ responsive: true, displayModeBar: false, doubleClick: false, showTips: false }}
           />
           {extraChildren}
           <LoadingOverlay visible={loading} />
@@ -401,7 +401,7 @@ const MapDisplay = ({
                 style={{ width: '100%', height: '100%' }}
                 onRelayout={handleRelayout}
                 onDoubleClick={() => onZoomedAreaChange?.(null)}
-                config={{ responsive: true, displayModeBar: false }}
+                config={{ responsive: true, displayModeBar: false, doubleClick: false, showTips: false }}
               />
               {hasHighSD && (
                 <HatchOverlay
