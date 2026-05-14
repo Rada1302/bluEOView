@@ -254,11 +254,28 @@ def get_dataset(file_url):
         ds = ds.isel(target=orig_indices)
         t_keys = [f"target_{orig_indices[pos]}" for pos in range(len(orig_indices))]
         t_labels = [raw_names[i] for i in orig_indices]
+
+        # Read WORMS IDs from the target_id variable/coord if present
+        worms_ids = None
+        for id_var in ["target_id"]:
+            if id_var in ds:
+                try:
+                    worms_ids = [int(v) for v in ds[id_var].values.tolist()]
+                except Exception:
+                    worms_ids = [str(v) for v in ds[id_var].values.tolist()]
+                break
+            if id_var in ds.coords:
+                try:
+                    worms_ids = [int(v) for v in ds.coords[id_var].values.tolist()]
+                except Exception:
+                    worms_ids = [str(v) for v in ds.coords[id_var].values.tolist()]
+                break
+
         ds = ds.assign_coords(target=("target", t_keys))
 
         valid_targets = [
-            {"key": k, "label": l, "target_id": orig_idx}
-            for k, l, orig_idx in zip(t_keys, t_labels, orig_indices)
+            {"key": k, "label": l, "target_id": worms_ids[pos] if worms_ids is not None else None}
+            for pos, (k, l) in enumerate(zip(t_keys, t_labels))
         ]
         target_map = {t["key"]: t for t in valid_targets}
         print(f"Valid targets: {len(valid_targets)}")

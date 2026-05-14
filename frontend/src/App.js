@@ -91,6 +91,7 @@ const App = () => {
           const options = data.features.map(f => ({
             label: f.label ?? formatFeatureName(f.value),
             value: f.value ?? f,
+            target_id: f.target_id ?? null,
           }));
           setFeatureOptions(options);
           setPanel(prev => ({ ...prev, feature: options[0].value }));
