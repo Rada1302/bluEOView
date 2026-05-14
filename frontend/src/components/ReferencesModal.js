@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -10,7 +10,10 @@ import {
   Divider,
   Box,
   Chip,
+  Collapse,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { about } from '../constants';
 
 const MetaRow = ({ label, children }) => (
@@ -25,6 +28,7 @@ const MetaRow = ({ label, children }) => (
 );
 
 const ReferencesModal = ({ open, onClose, metadata = {} }) => {
+  const [learnMoreOpen, setLearnMoreOpen] = useState(false);
   const hasMeta = Object.keys(metadata).length > 0;
 
   // Collect extra_attributes separately
@@ -141,27 +145,37 @@ const ReferencesModal = ({ open, onClose, metadata = {} }) => {
               </MetaRow>
             )}
 
-            {/* Extra / unrecognised attributes */}
-            {Object.keys(extra).length > 0 && (
-              <MetaRow label="Additional Attributes">
-                <Box component="dl" sx={{ m: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 1.5, rowGap: 0.25 }}>
-                  {Object.entries(extra).map(([k, v]) => (
-                    <React.Fragment key={k}>
-                      <Typography component="dt" variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                        {k}
-                      </Typography>
-                      <Typography component="dd" variant="body2" sx={{ m: 0, wordBreak: 'break-word' }}>
-                        {v}
-                      </Typography>
-                    </React.Fragment>
-                  ))}
-                </Box>
-              </MetaRow>
-            )}
-
             <MetaRow label="Software Development">
               Backend & Frontend: Rada Kamysheva
             </MetaRow>
+
+            {/* Extra / unrecognised attributes — collapsed under Learn More */}
+            {Object.keys(extra).length > 0 && (
+              <Box sx={{ mt: 1 }}>
+                <Button
+                  size="small"
+                  onClick={() => setLearnMoreOpen(prev => !prev)}
+                  endIcon={learnMoreOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  sx={{ textTransform: 'none', px: 0 }}
+                >
+                  Learn more
+                </Button>
+                <Collapse in={learnMoreOpen}>
+                  <Box component="dl" sx={{ m: 0, mt: 1, display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 1.5, rowGap: 0.25 }}>
+                    {Object.entries(extra).map(([k, v]) => (
+                      <React.Fragment key={k}>
+                        <Typography component="dt" variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                          {k}
+                        </Typography>
+                        <Typography component="dd" variant="body2" sx={{ m: 0, wordBreak: 'break-word' }}>
+                          {v}
+                        </Typography>
+                      </React.Fragment>
+                    ))}
+                  </Box>
+                </Collapse>
+              </Box>
+            )}
 
           </Box>
         )}
