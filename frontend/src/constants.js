@@ -7,13 +7,13 @@ import {
 export const SD_THRESHOLD = 50;
 
 // Explanatory descriptions
-export const aboutGeneration = "This is how diversity / species were generated.";
+export const aboutGeneration = "Species-level habitat suitability generated using the CEPHALOPOD framework, based on occurrence observations retrieved from Phyto- and ZooBase v2 (Vogt et al., 2026) and projected onto 1° × 1° global monthly environmental climatologies."
 
-export const aboutMean = "Mean Suitability Estimate"
+export const aboutMean = "Projected Habitat Suitability Index"
 
-export const aboutSD = "Standard Deviation of the Suitability"
+export const aboutSD = "Standard Deviation of the Suitability Index"
 
-export const aboutObs = "Observation Base"
+export const aboutObs = "Occurrence Observations Used to Calibrate CEPHALOPOD"
 
 export const aboutTrafficLight = "Robustness Checks"
 
