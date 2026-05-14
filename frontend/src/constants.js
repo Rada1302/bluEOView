@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     Typography,
-    Link,
+    Link,D
 } from '@mui/material';
 
 export const SD_THRESHOLD = 50;
@@ -9,13 +9,13 @@ export const SD_THRESHOLD = 50;
 // Explanatory descriptions
 export const aboutGeneration = "This is how diversity / species were generated.";
 
-export const aboutMean = "This is an explanation about mean.";
+export const aboutMean = "Mean Suitability Estimate"
 
-export const aboutSD = "This is an explanation about SD.";
+export const aboutSD = "Standard Deviation of the Suitability"
 
-export const aboutObs = "This is an explanation about observations.";
+export const aboutObs = "Observation Base"
 
-export const aboutTrafficLight = "This is an explanation about traffic light.";
+export const aboutTrafficLight = "Robustness Checks"
 
 export const welcomeShortText = "CEPHALOView is an interactive tool for exploring marine biodiversity data.\n\nBrowse global observation maps, switch between monthly and annual views, and compare multiple diversity metrics derived from open ocean datasets.";
 
@@ -124,11 +124,15 @@ export const monthNames = {
 export const DEFAULT_URLS = [
     {
         label: "Diversity",
-        value: "https://data.d4science.net/dhCYs"
+        value:  "https://data.up.ethz.ch/shared/Blueoview_data/default_diversity.nc"
     },
     {
         label: "Taxa",
-        value: "https://data.d4science.net/SkBJN"
+        value: "https://data.up.ethz.ch/shared/Blueoview_data/default_taxa.nc"
+    },
+    {
+        label: "TaxaSubSet",
+        value: "https://data.up.ethz.ch/shared/Blueoview_data/L2_taxa_occurrence_test_2.nc"
     }
 ];
 

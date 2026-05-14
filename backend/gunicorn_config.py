@@ -7,7 +7,9 @@ bind = "0.0.0.0:5000"
 # Workers: Recommended formula is (2 x $num_cores) + 1
 #mm workers = multiprocessing.cpu_count() * 2 + 1
 # Let's just use 4 workers
-workers = 4
+workers = 1
+
+timeout = 1200  # 10 min timeout
 
 # Logging
 accesslog = "-" # Log to stdout for Docker logs
