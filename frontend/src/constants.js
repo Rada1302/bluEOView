@@ -1,19 +1,42 @@
+import React from 'react';
+import {
+    Typography,
+    Link,
+} from '@mui/material';
+
 export const SD_THRESHOLD = 50;
 
 // Explanatory descriptions
-export const aboutGeneration = "This is how diversity / species were generated."
+export const aboutGeneration = "This is how diversity / species were generated.";
 
-export const aboutMean = "This is an explanation about mean."
+export const aboutMean = "This is an explanation about mean.";
 
-export const aboutSD = "This is an explanation about SD."
+export const aboutSD = "This is an explanation about SD.";
 
-export const aboutObs = "This is an explanation about observations."
+export const aboutObs = "This is an explanation about observations.";
 
-export const aboutTrafficLight = "This is an explanation about traffic light."
+export const aboutTrafficLight = "This is an explanation about traffic light.";
 
-export const welcomeShortText = "CEPHALOView is an interactive tool for exploring marine biodiversity data.\n\nBrowse global observation maps, switch between monthly and annual views, and compare multiple diversity metrics derived from open ocean datasets."
+export const welcomeShortText = "CEPHALOView is an interactive tool for exploring marine biodiversity data.\n\nBrowse global observation maps, switch between monthly and annual views, and compare multiple diversity metrics derived from open ocean datasets.";
 
-export const welcomeLongText = "Data is loaded from NetCDF files hosted on the BlueCloud infrastructure. You can explore the preloaded datasets from the dropdown, or paste a custom URL to load your own file.\n\nUse the feature selector to switch between biodiversity indices, and the month slider to animate seasonal patterns. The globe and map views are linked — zoom and pan are shared between them.\n\nThis tool was developed as part of the BlueCloud 2026 project, which aims to make marine research data more accessible and reusable."
+export const welcomeLongText = "Data is loaded from NetCDF files hosted on the BlueCloud infrastructure. You can explore the preloaded datasets from the dropdown, or paste a custom URL to load your own file.\n\nUse the feature selector to switch between biodiversity indices, and the month slider to animate seasonal patterns. The globe and map views are linked — zoom and pan are shared between them.\n\nThis tool was developed as part of the BlueCloud 2026 project, which aims to make marine research data more accessible and reusable.";
+
+export const about = <Typography variant="body2">
+    Schickele, A., Clerc, C., Benedetti, F., De Angelis, D., Hofmann Elizondo, U., Münnich, M.,
+    Irisson, J.-O., &amp; Vogt, M. (2025).{' '}
+    <i>
+        CEPHALOPOD: A package to standardize marine habitat-modelling practices and enhance
+        inter-comparability across biological observations
+    </i>.{' '}
+    <em>Methods in Ecology and Evolution</em>.{' '}
+    <Link
+        href="https://doi.org/10.1111/2041-210X.70040"
+        target="_blank"
+        rel="noopener noreferrer"
+    >
+        https://doi.org/10.1111/2041-210X.70040
+    </Link>
+</Typography>;
 
 // Title area
 export const PanelTitle = ({ title, loading, style }) => (
