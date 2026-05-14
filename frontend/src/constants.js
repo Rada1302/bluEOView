@@ -38,6 +38,8 @@ export const about = <Typography variant="body2">
     </Link>
 </Typography>;
 
+export const noQualityText = "No quality control metrics available for this source. The data was generated using only observations that passed the quality check, so everything is good to go.";
+
 // Title area
 export const PanelTitle = ({ title, loading, style }) => (
     <div style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

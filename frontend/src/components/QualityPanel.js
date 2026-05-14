@@ -9,39 +9,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import { aboutTrafficLight } from '../constants';
-
-// Always-green panel for diversity datasets
-function DiversityQCBadge() {
-    return (
-        <Box
-            sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-                px: 2,
-                py: 1.5,
-                borderRadius: 1,
-                backgroundColor: 'rgba(0,200,83,0.1)',
-                border: '1px solid rgba(0,200,83,0.3)',
-            }}
-        >
-            <Box
-                sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: '50%',
-                    backgroundColor: '#00c853',
-                    flexShrink: 0,
-                    boxShadow: '0 0 8px rgba(0,200,83,0.4)',
-                }}
-            />
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
-                Quality verified — diversity products are pre-screened.
-            </Typography>
-        </Box>
-    );
-}
+import { aboutTrafficLight, noQualityText } from '../constants';
 
 // Dot legend
 function Legend() {
@@ -226,7 +194,7 @@ function QCTable({ algorithms, colors, qcNames, recommendations }) {
 }
 
 // Main component
-export default function QualityPanel({ netcdfUrl, obsType, sx = {} }) {
+export default function QualityPanel({ netcdfUrl, sx = {} }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -251,8 +219,6 @@ export default function QualityPanel({ netcdfUrl, obsType, sx = {} }) {
 
         return () => ctrl.abort();
     }, [netcdfUrl]);
-
-    const isDiversity = obsType === 'diversity';
 
     return (
         <Box
@@ -296,41 +262,37 @@ export default function QualityPanel({ netcdfUrl, obsType, sx = {} }) {
                         {aboutTrafficLight}
                     </Typography>
 
-                    {isDiversity ? <DiversityQCBadge /> : (
+                    {loading && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 1 }}>
+                            <CircularProgress size={16} sx={{ color: 'white' }} />
+                            <Typography sx={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
+                                Loading data...
+                            </Typography>
+                        </Box>
+                    )}
+
+                    {error && (
+                        <Typography sx={{ fontSize: '0.85rem', color: '#e53935', p: 1 }}>
+                            {error}
+                        </Typography>
+                    )}
+
+                    {!loading && data?.available && (
                         <>
-                            {loading && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 1 }}>
-                                    <CircularProgress size={16} sx={{ color: 'white' }} />
-                                    <Typography sx={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
-                                        Loading data...
-                                    </Typography>
-                                </Box>
-                            )}
-
-                            {error && (
-                                <Typography sx={{ fontSize: '0.85rem', color: '#e53935', p: 1 }}>
-                                    {error}
-                                </Typography>
-                            )}
-
-                            {!loading && data?.available && (
-                                <>
-                                    <Legend />
-                                    <QCTable
-                                        algorithms={data.algorithms}
-                                        colors={data.colors}
-                                        qcNames={data.qcNames}
-                                        recommendations={data.recommendations}
-                                    />
-                                </>
-                            )}
-
-                            {!loading && !error && data && !data.available && (
-                                <Typography sx={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.4)', p: 1, fontStyle: 'italic' }}>
-                                    No quality control metrics available for this source.
-                                </Typography>
-                            )}
+                            <Legend />
+                            <QCTable
+                                algorithms={data.algorithms}
+                                colors={data.colors}
+                                qcNames={data.qcNames}
+                                recommendations={data.recommendations}
+                            />
                         </>
+                    )}
+
+                    {!loading && !error && data && !data.available && (
+                        <Typography sx={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.4)', p: 1, fontStyle: 'italic' }}>
+                            {noQualityText}
+                        </Typography>
                     )}
                 </Box>
             </Collapse>
