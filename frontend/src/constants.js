@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     Typography,
-    Link,D
+    Link, D
 } from '@mui/material';
 
 export const SD_THRESHOLD = 50;
@@ -124,7 +124,7 @@ export const monthNames = {
 export const DEFAULT_URLS = [
     {
         label: "Diversity",
-        value:  "https://data.up.ethz.ch/shared/Blueoview_data/default_diversity.nc"
+        value: "https://data.up.ethz.ch/shared/Blueoview_data/default_diversity.nc"
     },
     {
         label: "Taxa",
@@ -158,7 +158,7 @@ export const BlueCloudLogo = {
     href: 'https://blue-cloud.org',
 }
 
-export const EARTH_TEXTURE = "//unpkg.com/three-globe/example/img/earth-day.jpg";
+export const EARTH_TEXTURE = "/assets/earth_texture.png";
 
 export const logos = [
     {
