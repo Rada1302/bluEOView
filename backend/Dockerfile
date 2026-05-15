@@ -14,11 +14,14 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install gunicorn
 
+# Install tool for large data-file downloads; clean up afterwards
+RUN  apt-get update && apt-get install -y wget \
+  && rm -rf /var/lib/apt/lists/*
+
 # Copy the rest of the application code
 COPY . .
-COPY data/ data/
 
-# Expose the port the Python app runs on:
+# Expose the port the Python app runs on
 EXPOSE 5000
 
 # Run the application using gunicorn
