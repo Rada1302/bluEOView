@@ -248,6 +248,7 @@ const ControlPanel = ({
   return (
     <Box sx={{
       width: '100%',
+      height: '100%',
       backgroundColor: 'rgba(0,0,0,0.25)',
       backdropFilter: 'blur(8px)',
       borderRadius: 1,
@@ -280,7 +281,7 @@ const ControlPanel = ({
               fontSize: 11,
               fontWeight: 600,
               letterSpacing: '0.04em',
-              py: '8px',
+              py: '9px',
               '&:hover': { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: showStd ? 'rgba(70,90,140,0.9)' : 'rgba(50,50,50,0.85)' },
             }}
           >
@@ -299,7 +300,7 @@ const ControlPanel = ({
                 fontSize: 11,
                 fontWeight: 600,
                 letterSpacing: '0.04em',
-                py: '8px',
+                py: '9px',
                 '&:hover': { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: showObs ? 'rgba(70,90,140,0.9)' : 'rgba(50,50,50,0.85)' },
               }}
             >

@@ -224,6 +224,7 @@ export default function QualityPanel({ netcdfUrl, sx = {} }) {
         <Box
             sx={{
                 width: '100%',
+                height: '100%',
                 backgroundColor: 'rgba(0,0,0,0.25)',
                 backdropFilter: 'blur(8px)',
                 borderRadius: 1,

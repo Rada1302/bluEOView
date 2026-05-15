@@ -132,7 +132,7 @@ const DataPanel = ({
             <Box sx={{
                 display: 'flex',
                 flexDirection: { xs: 'column', md: 'column', lg: 'row' },
-                gap: 2,
+                gap: 1,
                 mb: 2,
                 width: '100%',
                 alignItems: 'stretch',
