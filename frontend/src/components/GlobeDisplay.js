@@ -4,6 +4,7 @@ import {
   generateColorStops,
   getInterpolatedColorFromValue,
   getLegendFromColorscale,
+  getLegendFromColorscaleLog,
 } from '../utils';
 import { aboutMean, aboutSD, aboutObs, colors, EARTH_TEXTURE, PanelTitle, SD_COLORSCALE, SD_THRESHOLD } from '../constants';
 
@@ -134,7 +135,7 @@ const GlobeDisplay = ({
         if (hasObs && obsVal !== null && obsVal !== undefined) {
           const color = obsType === 'diversity'
             ? '#fde725'
-            : getInterpolatedColorFromValue(obsVal, 0, obsMax ?? 1, colorscale);
+            : getInterpolatedColorFromValue(Math.log10(obsVal + 1), 0, Math.log10((obsMax ?? 1) + 1), colorscale);
           obsPoints.push({ lat, lng: lon, color });
         }
       }
@@ -173,7 +174,7 @@ const GlobeDisplay = ({
 
   const obsLegend = useMemo(() => {
     if (obsType === 'diversity' || obsMax == null) return null;
-    return getLegendFromColorscale(colorscale, 0, obsMax);
+    return getLegendFromColorscaleLog(colorscale, obsMax);
   }, [obsType, obsMax, colorscale]);
 
   const renderLegend = (legendData) => {

@@ -257,18 +257,29 @@ const MapDisplay = ({
     [meanData, uncertaintyMask]
   );
 
+  const obsDataLog = useMemo(() => {
+    if (obsType === 'diversity' || !obsData.length) return obsData;
+    return obsData.map(row => row.map(v => v == null ? null : Math.log10(v + 1)));
+  }, [obsData, obsType]);
+
   const obsTicks = useMemo(() => {
     if (obsType === 'diversity') {
       return { tickvals: [0, 1], ticktext: ['Absent', 'Present'], zmin: 0, zmax: 1 };
     }
     const maxV = obsMax ?? 1;
-    const step = Math.pow(10, Math.floor(Math.log10(maxV)) - 1);
-    const ticks = [];
-    for (let v = 0; v <= maxV; v += step) ticks.push(Math.round(v));
-    if (ticks[ticks.length - 1] !== Math.round(maxV)) ticks.push(Math.round(maxV));
-    const stride = Math.max(1, Math.ceil(ticks.length / 6));
-    const filtered = ticks.filter((_, i) => i % stride === 0);
-    return { tickvals: filtered, ticktext: filtered.map(v => String(v)), zmin: 0, zmax: maxV };
+    const logMax = Math.log10(maxV + 1);
+    const tickvals = [0];
+    const ticktext = ['0'];
+    for (let exp = 0; Math.pow(10, exp) <= maxV; exp++) {
+      const v = Math.pow(10, exp);
+      tickvals.push(Math.log10(v + 1));
+      ticktext.push(String(v));
+    }
+    if (Math.pow(10, Math.floor(Math.log10(maxV))) < maxV) {
+      tickvals.push(logMax);
+      ticktext.push(String(Math.round(maxV)));
+    }
+    return { tickvals, ticktext, zmin: 0, zmax: logMax };
   }, [obsType, obsMax]);
 
   const obsTitle = obsType === 'diversity'
@@ -444,7 +455,7 @@ const MapDisplay = ({
           aboutObs,
           obsData.length ? [{
             type: 'heatmap',
-            z: obsData,
+            z: obsDataLog,
             x: lons,
             y: lats,
             colorscale: obsType === 'diversity' ? [[0, '#333333'], [1, '#fde725']] : colorscale,
