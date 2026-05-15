@@ -171,6 +171,7 @@ const MapDisplay = ({
   onZoomedAreaChange,
   zoomedArea,
   fullTitle,
+  baseTitle,
   titleLoading = false,
   showStd,
   showObs,
@@ -283,8 +284,8 @@ const MapDisplay = ({
   }, [obsType, obsMax]);
 
   const obsTitle = obsType === 'diversity'
-    ? `${fullTitle} Observations`
-    : `${fullTitle} Observation Density`;
+    ? `${baseTitle} Observations`
+    : `${baseTitle} Observation Density`;
 
   const isZoomed = zoomedArea != null;
 

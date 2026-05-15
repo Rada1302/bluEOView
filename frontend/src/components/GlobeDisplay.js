@@ -59,6 +59,7 @@ const LoadingOverlay = ({ visible }) => (
 const GlobeDisplay = ({
   mapData,
   fullTitle,
+  baseTitle,
   showStd,
   showObs,
   loading = false,
@@ -250,8 +251,8 @@ const GlobeDisplay = ({
   );
 
   const obsTitle = obsType === 'diversity'
-    ? `${fullTitle} Observations`
-    : `${fullTitle} Observation Density`;
+    ? `${baseTitle} Observations`
+    : `${baseTitle} Observation Density`;
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>

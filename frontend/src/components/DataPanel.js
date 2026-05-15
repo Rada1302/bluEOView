@@ -36,6 +36,7 @@ const DataPanel = ({
     const [dataError, setDataError] = useState(null);
 
     const [committedTitle, setCommittedTitle] = useState('');
+    const [committedBaseTitle, setCommittedBaseTitle] = useState('');
 
     useEffect(() => { setShowObs(false); }, [netcdfUrl]);
 
@@ -94,6 +95,7 @@ const DataPanel = ({
                 });
 
                 setCommittedTitle(pendingTitle);
+                setCommittedBaseTitle(currentFeatureLabel);
             } catch (err) {
                 if (err.name !== 'AbortError') setDataError(err.message);
             } finally {
@@ -113,6 +115,7 @@ const DataPanel = ({
 
     const sharedDisplayProps = {
         fullTitle: committedTitle,
+        baseTitle: committedBaseTitle,
         titleLoading: dataLoading,
         featureOptions,
         mapData,
