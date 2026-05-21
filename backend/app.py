@@ -8,6 +8,7 @@ import requests
 import tempfile
 import hashlib
 import os
+import traceback
 
 app = Flask(__name__)
 CORS(app)
@@ -166,7 +167,7 @@ def get_dataset(file_url):
     if cached is not None:
         return cached
 
-    # serialize per URL, not globally — different files load in parallel
+    # serialize per URL, not globally -- different files load in parallel
     url_lock = get_url_lock(file_url)
     with url_lock:
         with DATASETS_LOCK:
@@ -177,18 +178,21 @@ def get_dataset(file_url):
         local_path = get_local_path(file_url)
         print(f"Opening dataset: {local_path}")
 
-        # Lazy open with dask chunks; defer reads until needed.
-        # Try h5netcdf first (faster), fall back to default.
         try:
             ds = xr.open_dataset(
                 local_path, engine="h5netcdf", mask_and_scale=True, chunks={}
             )
         except Exception:
-            ds = xr.open_dataset(local_path, mask_and_scale=True, chunks={})
+            try:
+                ds = xr.open_dataset(local_path, mask_and_scale=True, chunks={})
+            except Exception:
+                ds = xr.open_dataset(
+                    local_path, mask_and_scale=True, chunks={}, decode_times=False
+                )
 
         print(f"Data vars: {list(ds.data_vars)}, dims: {dict(ds.sizes)}")
 
-        # normalise legacy species → taxa naming
+        # normalise legacy species -- taxa -- target naming
         rename_map = {}
         if "species_name" in ds and "taxa_name" not in ds:
             rename_map["species_name"] = "taxa_name"
@@ -197,10 +201,18 @@ def get_dataset(file_url):
         if rename_map:
             ds = ds.rename(rename_map)
 
+        rename_map = {}
+        if "taxa_name" in ds and "target_name" not in ds:
+            rename_map["taxa_name"] = "target_name"
+        if "taxa" in ds.dims and "target" not in ds.dims:
+            rename_map["taxa"] = "target"
+        if rename_map:
+            ds = ds.rename(rename_map)
+
         # resolve name variable
-        taxa_name_var = next((v for v in ["taxa_name", "target_name"] if v in ds), None)
+        taxa_name_var = next((v for v in ["target_name", "taxa_name"] if v in ds), None)
         if taxa_name_var is None:
-            raise ValueError("Dataset has neither 'taxa_name' nor 'target_name'")
+            raise ValueError("Dataset has neither 'target_name' nor 'taxa_name'")
         raw_names = [decode_name(n) for n in ds[taxa_name_var].values.tolist()]
 
         # global metadata
@@ -244,11 +256,16 @@ def get_dataset(file_url):
         obs_type = detect_obs_type_fast(ds)
 
         # Valid targets: need at least one finite mean at t=0.
-        # This pulls (n_target, lat, lon) into memory — unavoidable, but it's a
+        # This pulls (n_target, lat, lon) into memory -- unavoidable, but it's a
         # single slice along time, not the whole cube.
         print("Filtering valid targets…")
-        mean_t0 = ds["mean"].isel(time=0).values
-        valid_mask = np.isfinite(mean_t0).reshape(mean_t0.shape[0], -1).any(axis=1)
+        mean_da = ds["mean"]
+        if "time" in mean_da.dims:
+            mean_da = mean_da.isel(time=0)
+        # Transpose so target is always the leading axis before flattening.
+        mean_t0 = mean_da.transpose("target", ...).values
+        n_targets = ds.sizes["target"]
+        valid_mask = np.isfinite(mean_t0).reshape(n_targets, -1).any(axis=1)
         orig_indices = [int(i) for i, ok in enumerate(valid_mask) if ok]
 
         ds = ds.isel(target=orig_indices)
@@ -274,13 +291,17 @@ def get_dataset(file_url):
         ds = ds.assign_coords(target=("target", t_keys))
 
         valid_targets = [
-            {"key": k, "label": l, "target_id": worms_ids[pos] if worms_ids is not None else None}
+            {
+                "key": k,
+                "label": l,
+                "target_id": worms_ids[pos] if worms_ids is not None else None,
+            }
             for pos, (k, l) in enumerate(zip(t_keys, t_labels))
         ]
         target_map = {t["key"]: t for t in valid_targets}
         print(f"Valid targets: {len(valid_targets)}")
 
-        # obs global max — only meaningful when obs is NOT per-target.
+        # obs global max -- only meaningful when obs is NOT per-target.
         # Defer to first request rather than scanning here.
         # Stored as None == "not computed yet".
         entry = {
@@ -379,6 +400,7 @@ def diversity_map():
     try:
         dataset = get_dataset(file_url)
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": f"Failed to load dataset: {e}"}), 500
 
     ds = dataset["ds"]
@@ -456,6 +478,7 @@ def diversity_features():
     try:
         dataset = get_dataset(file_url)
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": f"Failed to load dataset: {e}"}), 500
 
     return jsonify(
@@ -484,6 +507,7 @@ def diversity_metadata():
     try:
         dataset = get_dataset(file_url)
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": f"Failed to load dataset: {e}"}), 500
     return jsonify(
         {
@@ -509,6 +533,7 @@ def diversity_qc():
     try:
         dataset = get_dataset(file_url)
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": f"Failed to load dataset: {e}"}), 500
 
     ds = dataset["ds"]
