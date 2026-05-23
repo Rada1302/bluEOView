@@ -20,7 +20,8 @@ PER_URL_LOCKS = defaultdict(Lock)  # serialize work per-URL, not globally
 PER_URL_LOCKS_GUARD = Lock()
 DOWNLOADED_FILES = {}
 
-CACHE_DIR = os.path.join(tempfile.gettempdir(), "cephaloview_cache")
+
+CACHE_DIR = "/var/cephaloview_data"
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 
