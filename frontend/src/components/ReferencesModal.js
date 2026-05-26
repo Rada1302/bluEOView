@@ -63,6 +63,10 @@ const ReferencesModal = ({ open, onClose, metadata = {} }) => {
               <MetaRow label="Summary">{metadata.summary}</MetaRow>
             )}
 
+            {metadata.description && (
+              <MetaRow label="Description">{metadata.description}</MetaRow>
+            )}
+
             {metadata.author && (
               <MetaRow label="Author / Creator">{metadata.author}</MetaRow>
             )}

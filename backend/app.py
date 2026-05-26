@@ -79,7 +79,7 @@ def extract_metadata(ds):
     attrs = ds.attrs
     field_map = {
         "title": ["title"],
-        "summary": ["summary", "abstract", "description"],
+        "summary": ["summary", "abstract"],
         "institution": [
             "institution",
             "university",
@@ -94,6 +94,7 @@ def extract_metadata(ds):
         "date_created": ["date_created", "creation_date"],
         "history": ["history"],
         "source": ["source"],
+        "description": ["description", "global:description"],
         "comment": ["comment", "notes"],
         "keywords": ["keywords"],
         "project": ["project", "program"],
