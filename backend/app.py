@@ -550,6 +550,8 @@ def diversity_qc():
     try:
         qc_col = ds["qc_col"]
         qc_rec = ds["qc_rec"]
+        qc_col_long_name = decode_str(qc_col.attrs.get("long_name", ""))
+        qc_rec_long_name = decode_str(qc_rec.attrs.get("long_name", ""))
         print(f"[qc] qc_col dims={list(qc_col.dims)}, qc_rec dims={list(qc_rec.dims)}, feature={feature_key}")
 
         col_dims = list(qc_col.dims)
@@ -638,6 +640,8 @@ def diversity_qc():
                 "qcNames": qc_name_labels,
                 "colors": colors,
                 "recommendations": recommendations,
+                "qcColLongName": qc_col_long_name,
+                "qcRecLongName": qc_rec_long_name,
             }
         )
 

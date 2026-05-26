@@ -166,6 +166,7 @@ const DataPanel = ({
                     <QualityPanel
                         netcdfUrl={netcdfUrlInput}
                         feature={panel.feature}
+                        openInfoModal={openInfoModal}
                     />
                 </Box>
             </Box>

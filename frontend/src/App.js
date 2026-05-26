@@ -62,8 +62,8 @@ const App = () => {
   useEffect(() => () => debouncedUpdateMonth.cancel(), [debouncedUpdateMonth]);
 
   // Info modal
-  const openInfoModal = (title) => {
-    setInfoModalShortText('No information available');
+  const openInfoModal = (title, shortText) => {
+    setInfoModalShortText(shortText || 'No information available');
     setInfoModalTitle(title);
     setInfoModalOpen(true);
   };

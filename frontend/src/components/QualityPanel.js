@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { aboutTrafficLight, noQualityText } from '../constants';
 
 // Dot legend
@@ -194,7 +195,7 @@ function QCTable({ algorithms, colors, qcNames, recommendations }) {
 }
 
 // Main component
-export default function QualityPanel({ netcdfUrl, feature, sx = {} }) {
+export default function QualityPanel({ netcdfUrl, feature, openInfoModal, sx = {} }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -256,9 +257,23 @@ export default function QualityPanel({ netcdfUrl, feature, sx = {} }) {
                     {open ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                 </IconButton>
 
-                <Typography sx={{ fontSize: 19, flex: 1, color: 'white' }}>
+                <Typography sx={{ fontSize: 19, color: 'white' }}>
                     Quality Control
                 </Typography>
+
+                <IconButton
+                    size="small"
+                    sx={{ color: '#fff', ml: 1 }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        const parts = [];
+                        if (data?.qcColLongName) parts.push(data.qcColLongName);
+                        if (data?.qcRecLongName) parts.push(data.qcRecLongName);
+                        openInfoModal?.('Quality Control', parts.join('\n\n') || 'No description available.');
+                    }}
+                >
+                    <InfoOutlinedIcon fontSize="small" />
+                </IconButton>
             </Box>
 
             <Collapse in={open}>
