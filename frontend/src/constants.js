@@ -17,6 +17,8 @@ export const aboutObs = "Observations Used to Calibrate CEPHALOPOD"
 
 export const aboutTrafficLight = ""
 
+//Algorithms:\n\nGLM: Generalized Linear Model, GAM: General Additive Model, MLP: Multilayer Perceptron, SVM: Support Vector Machine, RF: Random Forest, BRT: Boosted Regression Trees\n\nCheck\nPre-VIP: priori variable importance, FIT: predictive performance, Cum-VIP: cumulative variance explained, DEV: projection uncertainty."
+
 export const welcomeShortText = "CEPHALOView is an interactive tool for exploring marine biodiversity data.\n\nBrowse global observation maps, switch between monthly and annual views, and compare multiple diversity metrics derived from open ocean datasets.";
 
 export const welcomeLongText = "Data is loaded from NetCDF files hosted on the BlueCloud infrastructure. You can explore the preloaded datasets from the dropdown, or paste a custom URL to load your own file.\n\nUse the feature selector to switch between biodiversity indices, and the month slider to animate seasonal patterns. The globe and map views are linked — zoom and pan are shared between them.\n\nThis tool was developed as part of the BlueCloud 2026 project, which aims to make marine research data more accessible and reusable.";
@@ -38,7 +40,7 @@ export const about = <Typography variant="body2">
     </Link>
 </Typography>;
 
-export const noQualityText = "No quality control metrics available for this source. The data was generated using only observations that passed the quality check, so everything is good to go.";
+export const noQualityText = "Quality control metrics are not explicitly provided, as the data have been pre-filtered. Only those that passed the initial quality checks were used for the projection.";
 
 // Title area
 export const PanelTitle = ({ title, loading, style }) => (
@@ -123,11 +125,11 @@ export const monthNames = {
 
 export const DEFAULT_URLS = [
     {
-        label: "Diversity projection based on occurrance",
+        label: "Diversity projection based on occurrence",
         value: "https://data.up.ethz.ch/shared/Blueoview_data/L3_plankton_species_diversity_from_occurrence_20260518.nc"
     },
     {
-        label: "Species projection based on occurrance",
+        label: "Species projection based on occurrence",
         value: "https://data.up.ethz.ch/shared/Blueoview_data/L2_plankton_species_distribution_from_occurrence_20260518.nc"
     },
     {
