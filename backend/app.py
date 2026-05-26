@@ -483,6 +483,12 @@ def diversity_features():
         traceback.print_exc()
         return jsonify({"error": f"Failed to load dataset: {e}"}), 500
 
+    ds = dataset["ds"]
+    target_name_var = next((v for v in ["target_name", "taxa_name"] if v in ds), None)
+    tn_attrs = ds[target_name_var].attrs if target_name_var else {}
+    tn_standard_name = decode_str(tn_attrs["standard_name"]) if "standard_name" in tn_attrs else None
+    tn_long_name = decode_str(tn_attrs["long_name"]) if "long_name" in tn_attrs else None
+
     return jsonify(
         {
             "features": [
@@ -491,6 +497,8 @@ def diversity_features():
                     "label": t["label"].replace("_", " ").title(),
                     "description": f"Diversity metric: {t['label']}",
                     "target_id": t["target_id"],
+                    "standard_name": tn_standard_name,
+                    "long_name": tn_long_name,
                 }
                 for t in dataset["targets"]
             ],

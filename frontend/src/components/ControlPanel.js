@@ -337,7 +337,22 @@ const ControlPanel = ({
 
           {/* Variable */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <RowLabel>Variable</RowLabel>
+            <Box sx={{ display: 'flex', alignItems: 'center', width: 110, flexShrink: 0 }}>
+              <Typography sx={{ color: 'white' }}>Variable</Typography>
+              <IconButton
+                size="small"
+                sx={{ color: '#fff', ml: 0.5, p: 0.25 }}
+                onClick={() => {
+                  const found = featureOptions.find(f => f.value === feature);
+                  const parts = [];
+                  if (found?.standard_name) parts.push(found.standard_name);
+                  if (found?.long_name) parts.push(found.long_name);
+                  openInfoModal?.('Variable', parts.join('\n\n') || 'No description available.');
+                }}
+              >
+                <InfoOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Box>
             {featuresReady ? (
               <FormControl size="small" sx={{ ...glassSelect, flex: 1, borderRadius: 2 }}>
                 <Select
@@ -359,19 +374,6 @@ const ControlPanel = ({
                       </span>
                     );
                   }}
-                  startAdornment={
-                    <IconButton
-                      size="small"
-                      sx={{ color: '#fff', mr: 0.5 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const found = featureOptions.find(f => f.value === feature);
-                        openInfoModal?.(found?.label ?? feature, feature);
-                      }}
-                    >
-                      <InfoOutlinedIcon fontSize="small" />
-                    </IconButton>
-                  }
                 >
                   <ListSubheader sx={{ bgcolor: 'rgb(45, 45, 45)', p: 1 }}>
                     <TextField

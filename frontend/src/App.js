@@ -92,6 +92,8 @@ const App = () => {
             label: f.label ?? formatFeatureName(f.value),
             value: f.value ?? f,
             target_id: f.target_id ?? null,
+            standard_name: f.standard_name ?? null,
+            long_name: f.long_name ?? null,
           }));
           setFeatureOptions(options);
           setPanel(prev => ({ ...prev, feature: options[0].value }));
