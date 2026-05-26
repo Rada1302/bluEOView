@@ -1,9 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Plot from 'react-plotly.js';
 import {
-  aboutMean,
-  aboutSD,
-  aboutObs,
   colors,
   EARTH_TEXTURE,
   SD_COLORSCALE,
@@ -166,6 +163,13 @@ const PanelTitle = ({ title, loading, style }) => (
   </div>
 );
 
+const varSubtitle = (varInfo, key) => {
+  const info = varInfo?.[key];
+  if (!info) return null;
+  const parts = [info.standard_name, info.long_name].filter(Boolean);
+  return parts.length ? parts.join(' · ') : null;
+};
+
 const MapDisplay = ({
   mapData,
   onZoomedAreaChange,
@@ -175,6 +179,7 @@ const MapDisplay = ({
   titleLoading = false,
   showStd,
   showObs,
+  varInfo = null,
   loading = false,
   error = null,
 }) => {
@@ -387,7 +392,7 @@ const MapDisplay = ({
           <div style={aspectBox}>
             <div style={{ ...aspectInner, cursor: loading ? 'wait' : 'default' }}>
               <PanelTitle title={fullTitle} loading={titleLoading} style={titleStyle} />
-              <div style={subTitleStyle}>{aboutMean}</div>
+              <div style={subTitleStyle}>{varSubtitle(varInfo, 'mean')}</div>
               <Plot
                 data={meanData.length ? [{
                   type: 'heatmap',
@@ -432,7 +437,7 @@ const MapDisplay = ({
         {/* SD panel */}
         {showStd && renderPanel(
           `${fullTitle} Standard Deviation`,
-          aboutSD,
+          varSubtitle(varInfo, 'sd'),
           stdData.length ? [{
             type: 'heatmap',
             z: stdData,
@@ -453,7 +458,7 @@ const MapDisplay = ({
         {/* Obs panel */}
         {showObs && hasObs && renderPanel(
           obsTitle,
-          aboutObs,
+          varSubtitle(varInfo, 'obs'),
           obsData.length ? [{
             type: 'heatmap',
             z: obsDataLog,

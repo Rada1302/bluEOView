@@ -51,6 +51,7 @@ const App = () => {
   const [featuresError, setFeaturesError] = useState(null);
   const [metaData, setMetaData] = useState([]);
   const [timeLongName, setTimeLongName] = useState(null);
+  const [varInfo, setVarInfo] = useState(null);
 
   // Panel state
   const [panel, setPanel] = useState(() => ({ ...initialPanel }));
@@ -79,6 +80,7 @@ const App = () => {
     setFeaturesError(null);
     setFeaturesLoading(true);
     setTimeLongName(null);
+    setVarInfo(null);
     setPanel(prev => ({ ...prev, feature: null }));
 
     fetch(`/api/diversity-features?file=${encodeURIComponent(loadedUrl)}`)
@@ -101,6 +103,7 @@ const App = () => {
           setPanel(prev => ({ ...prev, feature: options[0].value }));
           setMetaData(data.metadata);
           setTimeLongName(data.timeLongName ?? null);
+          setVarInfo(data.varInfo ?? null);
         } else {
           setFeaturesError('No valid features found in this dataset.');
         }
@@ -239,6 +242,7 @@ const App = () => {
             featuresError={featuresError}
             allUrls={allUrls}
             timeLongName={timeLongName}
+            varInfo={varInfo}
           />
         </Box>
       </Box>

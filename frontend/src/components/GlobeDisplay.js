@@ -6,7 +6,7 @@ import {
   getLegendFromColorscale,
   getLegendFromColorscaleLog,
 } from '../utils';
-import { aboutMean, aboutSD, aboutObs, colors, EARTH_TEXTURE, PanelTitle, SD_COLORSCALE, SD_THRESHOLD } from '../constants';
+import { colors, EARTH_TEXTURE, PanelTitle, SD_COLORSCALE, SD_THRESHOLD } from '../constants';
 
 const parseHex = hex => {
   const h = hex.replace('#', '');
@@ -56,12 +56,20 @@ const LoadingOverlay = ({ visible }) => (
   </div>
 );
 
+const varSubtitle = (varInfo, key) => {
+  const info = varInfo?.[key];
+  if (!info) return null;
+  const parts = [info.standard_name, info.long_name].filter(Boolean);
+  return parts.length ? parts.join(' · ') : null;
+};
+
 const GlobeDisplay = ({
   mapData,
   fullTitle,
   baseTitle,
   showStd,
   showObs,
+  varInfo = null,
   loading = false,
   titleLoading = false,
   error = null,
@@ -271,7 +279,7 @@ const GlobeDisplay = ({
             : getInterpolatedColorFromValue(d.val, minValue, maxValue, colorscale),
           meanLegend,
           fullTitle,
-          aboutMean,
+          varSubtitle(varInfo, 'mean'),
           meanDims,
           null,
         )}
@@ -283,7 +291,7 @@ const GlobeDisplay = ({
           d => d.color,
           sdLegend,
           `${fullTitle} Standard Deviation`,
-          aboutSD,
+          varSubtitle(varInfo, 'sd'),
           stdDims,
           null,
         )}
@@ -295,7 +303,7 @@ const GlobeDisplay = ({
           d => d.color,
           obsLegend,
           obsTitle,
-          aboutObs,
+          varSubtitle(varInfo, 'obs'),
           obsDims,
           null,
         )}

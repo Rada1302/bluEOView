@@ -495,6 +495,15 @@ def diversity_features():
         if raw is not None:
             time_long_name = decode_str(raw)
 
+    def var_info(var_name):
+        if var_name not in ds:
+            return {"standard_name": None, "long_name": None}
+        attrs = ds[var_name].attrs
+        return {
+            "standard_name": decode_str(attrs["standard_name"]) if "standard_name" in attrs else None,
+            "long_name": decode_str(attrs["long_name"]) if "long_name" in attrs else None,
+        }
+
     return jsonify(
         {
             "features": [
@@ -512,6 +521,11 @@ def diversity_features():
             "metadata": dataset["metadata"],
             "hasObs": dataset["has_obs"],
             "obsType": dataset["obs_type"],
+            "varInfo": {
+                "mean": var_info("mean"),
+                "sd": var_info("sd"),
+                "obs": var_info("obs"),
+            },
         }
     )
 

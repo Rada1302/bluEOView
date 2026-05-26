@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Box, Alert, Typography, CircularProgress } from '@mui/material';
 import GlobeDisplay from './GlobeDisplay';
 import MapDisplay from './MapDisplay';
-import { monthNames, aboutMean, aboutSD, SD_THRESHOLD } from '../constants';
+import { monthNames } from '../constants';
 import ControlPanel from './ControlPanel';
 import QualityPanel from './QualityPanel';
 
@@ -28,6 +28,7 @@ const DataPanel = ({
     featuresError,
     allUrls,
     timeLongName,
+    varInfo = null,
 }) => {
     const [showStd, setShowStd] = useState(false);
     const [showObs, setShowObs] = useState(false);
@@ -122,8 +123,7 @@ const DataPanel = ({
         mapData,
         showStd,
         showObs,
-        subTitleMean: aboutMean,
-        subTitleSD: aboutSD,
+        varInfo,
         loading: dataLoading,
         error: dataError,
     };
