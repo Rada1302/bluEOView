@@ -194,7 +194,7 @@ function QCTable({ algorithms, colors, qcNames, recommendations }) {
 }
 
 // Main component
-export default function QualityPanel({ netcdfUrl, sx = {} }) {
+export default function QualityPanel({ netcdfUrl, feature, sx = {} }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -211,14 +211,18 @@ export default function QualityPanel({ netcdfUrl, sx = {} }) {
         setError(null);
         setLoading(true);
 
-        fetch(`/api/diversity-qc?file=${encodeURIComponent(netcdfUrl)}`, { signal: ctrl.signal })
+        const url = feature
+            ? `/api/diversity-qc?file=${encodeURIComponent(netcdfUrl)}&feature=${encodeURIComponent(feature)}`
+            : `/api/diversity-qc?file=${encodeURIComponent(netcdfUrl)}`;
+
+        fetch(url, { signal: ctrl.signal })
             .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
             .then(d => { if (!ctrl.signal.aborted) setData(d); })
             .catch(err => { if (err.name !== 'AbortError') setError(err.message); })
             .finally(() => { if (!ctrl.signal.aborted) setLoading(false); });
 
         return () => ctrl.abort();
-    }, [netcdfUrl]);
+    }, [netcdfUrl, feature]);
 
     return (
         <Box

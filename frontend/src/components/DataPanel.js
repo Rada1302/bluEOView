@@ -165,6 +165,7 @@ const DataPanel = ({
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                     <QualityPanel
                         netcdfUrl={netcdfUrlInput}
+                        feature={panel.feature}
                     />
                 </Box>
             </Box>

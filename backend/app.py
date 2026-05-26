@@ -528,6 +528,7 @@ def decode_str(val):
 @app.route("/api/diversity-qc", methods=["GET"])
 def diversity_qc():
     file_url = request.args.get("file", type=str)
+    feature_key = request.args.get("feature", type=str)
     if not file_url:
         return jsonify({"error": "Missing required parameter: file"}), 400
 
@@ -542,9 +543,13 @@ def diversity_qc():
     if "qc_col" not in ds or "qc_rec" not in ds:
         return jsonify({"available": False})
 
+    if feature_key and feature_key not in dataset["target_map"]:
+        return jsonify({"error": f"Unknown feature '{feature_key}'"}), 400
+
     try:
         qc_col = ds["qc_col"]
         qc_rec = ds["qc_rec"]
+        print(f"[qc] qc_col dims={list(qc_col.dims)}, qc_rec dims={list(qc_rec.dims)}, feature={feature_key}")
 
         col_dims = list(qc_col.dims)
         target_dim = next(
@@ -552,8 +557,22 @@ def diversity_qc():
             None,
         )
         if target_dim:
-            qc_col = qc_col.isel({target_dim: 0})
+            if feature_key:
+                qc_col = qc_col.sel({target_dim: feature_key})
+            else:
+                qc_col = qc_col.isel({target_dim: 0})
             col_dims = list(qc_col.dims)
+
+        rec_dims = list(qc_rec.dims)
+        rec_target_dim = next(
+            (d for d in rec_dims if "target" in d.lower() or "taxa" in d.lower()),
+            None,
+        )
+        if rec_target_dim:
+            if feature_key:
+                qc_rec = qc_rec.sel({rec_target_dim: feature_key})
+            else:
+                qc_rec = qc_rec.isel({rec_target_dim: 0})
 
         if len(col_dims) != 2:
             raise ValueError(
@@ -590,7 +609,19 @@ def diversity_qc():
         ]
 
         rec_vals = qc_rec.load().values
-        recommendations = [decode_str(v).split("'")[1] + "." for v in rec_vals]
+        if rec_vals.ndim == 0:
+            rec_vals = rec_vals.reshape(1)
+        print(f"[qc] rec_vals shape={rec_vals.shape}, sample={rec_vals.ravel()[:3]}")
+
+        def parse_rec(v):
+            s = decode_str(v)
+            parts = s.split("'")
+            if len(parts) >= 3:
+                # "Use 'BRT' for ..." → extract text between first pair of quotes
+                return parts[1] + "."
+            return s if s.endswith(".") else s + "."
+
+        recommendations = [parse_rec(v) for v in rec_vals.ravel()]
 
         n_alg = len(alg_labels)
         if len(recommendations) < n_alg:
