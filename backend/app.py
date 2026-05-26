@@ -497,11 +497,17 @@ def diversity_features():
 
     def var_info(var_name):
         if var_name not in ds:
-            return {"standard_name": None, "long_name": None}
+            return {"standard_name": None, "long_name": None, "unit": None}
         attrs = ds[var_name].attrs
+        unit = None
+        for key in ("unit", "units"):
+            if key in attrs:
+                unit = decode_str(attrs[key])
+                break
         return {
             "standard_name": decode_str(attrs["standard_name"]) if "standard_name" in attrs else None,
             "long_name": decode_str(attrs["long_name"]) if "long_name" in attrs else None,
+            "unit": unit,
         }
 
     return jsonify(

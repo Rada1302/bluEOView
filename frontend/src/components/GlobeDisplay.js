@@ -186,12 +186,12 @@ const GlobeDisplay = ({
     return getLegendFromColorscaleLog(colorscale, obsMax);
   }, [obsType, obsMax, colorscale]);
 
-  const renderLegend = (legendData) => {
+  const renderLegend = (legendData, unit) => {
     if (!legendData) return null;
     return (
       <div style={{
         position: 'absolute', top: 50, right: 10,
-        width: 70, height: 'calc(100% - 70px)',
+        width: unit ? 84 : 70, height: 'calc(100% - 70px)',
         display: 'flex', flexDirection: 'row', alignItems: 'center',
         pointerEvents: 'none', zIndex: 10,
       }}>
@@ -208,6 +208,15 @@ const GlobeDisplay = ({
             <div key={i} style={{ color: 'white', fontSize: 12 }}>{lbl}</div>
           ))}
         </div>
+        {unit && (
+          <div style={{
+            writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+            color: 'rgba(255,255,255,0.7)', fontSize: 10,
+            marginLeft: 4, alignSelf: 'center',
+          }}>
+            {unit}
+          </div>
+        )}
       </div>
     );
   };
@@ -224,7 +233,7 @@ const GlobeDisplay = ({
     pointerEvents: 'none', zIndex: 5,
   };
 
-  const renderGlobe = (containerRef, globeRef, data, colorFn, legend, title, subtitle, dims, controls) => (
+  const renderGlobe = (containerRef, globeRef, data, colorFn, legend, title, subtitle, dims, controls, unit) => (
     <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%' }}>
         <div
@@ -250,7 +259,7 @@ const GlobeDisplay = ({
             pointsMerge={true}
             pointTransitionDuration={0}
           />
-          {renderLegend(legend)}
+          {renderLegend(legend, unit)}
           {controls}
           <LoadingOverlay visible={loading} />
         </div>
@@ -282,6 +291,7 @@ const GlobeDisplay = ({
           varSubtitle(varInfo, 'mean'),
           meanDims,
           null,
+          varInfo?.mean?.unit,
         )}
 
         {/* SD globe */}
@@ -293,6 +303,7 @@ const GlobeDisplay = ({
           `${fullTitle} Standard Deviation`,
           varSubtitle(varInfo, 'sd'),
           stdDims,
+          null,
           null,
         )}
 
@@ -306,6 +317,7 @@ const GlobeDisplay = ({
           varSubtitle(varInfo, 'obs'),
           obsDims,
           null,
+          varInfo?.obs?.unit,
         )}
       </div>
 

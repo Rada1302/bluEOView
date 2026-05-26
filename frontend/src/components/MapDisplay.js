@@ -404,7 +404,12 @@ const MapDisplay = ({
                   zauto: false,
                   zmin: finalZMin,
                   zmax: finalZMax,
-                  colorbar: { ...colorbarBase, tickvals, ticktext },
+                  colorbar: {
+                    ...colorbarBase, tickvals, ticktext,
+                    ...(varInfo?.mean?.unit && {
+                      title: { text: varInfo.mean.unit, side: 'right', font: { color: 'rgba(255,255,255,0.7)', size: 10 } },
+                    }),
+                  },
                   text: meanHoverText,
                   hovertemplate: '%{text}<extra></extra>',
                   hoverlabel: {
@@ -474,6 +479,9 @@ const MapDisplay = ({
                 ...colorbarBase,
                 tickvals: obsTicks.tickvals,
                 ticktext: obsTicks.ticktext,
+                ...(varInfo?.obs?.unit && {
+                  title: { text: varInfo.obs.unit, side: 'right', font: { color: 'rgba(255,255,255,0.7)', size: 10 } },
+                }),
               },
             }),
             hovertemplate: obsType === 'diversity'
