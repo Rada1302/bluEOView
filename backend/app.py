@@ -423,7 +423,7 @@ def diversity_map():
     mean_slice = ds["mean"].sel(target=feature_key).isel(time=time_index).load()
     finite_mean = mean_slice.values[np.isfinite(mean_slice.values)]
     min_val = round(float(finite_mean.min()), 3) if finite_mean.size > 0 else None
-    max_val = round(float(finite_mean.max()), 3) if finite_mean.size > 0 else None
+    max_val = round(float(np.percentile(finite_mean, 95)), 3) if finite_mean.size > 0 else None
 
     sd_slice = ds["sd"].sel(target=feature_key).isel(time=time_index).load()
     sd_max_for_target = get_sd_max_for_target(dataset, feature_key)
