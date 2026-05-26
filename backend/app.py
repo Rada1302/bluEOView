@@ -489,6 +489,12 @@ def diversity_features():
     tn_standard_name = decode_str(tn_attrs["standard_name"]) if "standard_name" in tn_attrs else None
     tn_long_name = decode_str(tn_attrs["long_name"]) if "long_name" in tn_attrs else None
 
+    time_long_name = None
+    if "time" in ds:
+        raw = ds["time"].attrs.get("long_name")
+        if raw is not None:
+            time_long_name = decode_str(raw)
+
     return jsonify(
         {
             "features": [
@@ -502,6 +508,7 @@ def diversity_features():
                 }
                 for t in dataset["targets"]
             ],
+            "timeLongName": time_long_name,
             "metadata": dataset["metadata"],
             "hasObs": dataset["has_obs"],
             "obsType": dataset["obs_type"],

@@ -27,6 +27,7 @@ const DataPanel = ({
     featuresLoading,
     featuresError,
     allUrls,
+    timeLongName,
 }) => {
     const [showStd, setShowStd] = useState(false);
     const [showObs, setShowObs] = useState(false);
@@ -155,6 +156,7 @@ const DataPanel = ({
                         featuresLoading={featuresLoading}
                         featuresError={featuresError}
                         allUrls={allUrls}
+                        timeLongName={timeLongName}
                         showStd={showStd}
                         onToggleStd={() => setShowStd(v => !v)}
                         showObs={showObs}

@@ -204,6 +204,7 @@ const ControlPanel = ({
   showStd = false, onToggleStd,
   showObs = false, onToggleObs,
   hasObs = false,
+  timeLongName,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(true);
@@ -425,61 +426,68 @@ const ControlPanel = ({
 
           {/* Time Frame */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <RowLabel>Time Frame</RowLabel>
-            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
-              <RadioGroup
-                value={isAnnual ? 'annual' : 'monthly'}
-                onChange={(e) => handleAnnualToggle(e.target.value === 'annual')}
-                sx={{ flexShrink: 0 }}
+            <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              <Typography sx={{ color: 'white', whiteSpace: 'nowrap' }}>Time Frame</Typography>
+              <IconButton
+                size="small"
+                sx={{ color: '#fff', ml: 0.5, p: 0.25 }}
+                onClick={() => openInfoModal?.('Time Frame', timeLongName || 'No description available.')}
               >
-                {['Annual', 'Monthly'].map((opt) => (
-                  <FormControlLabel
-                    key={opt}
-                    value={opt.toLowerCase()}
-                    control={
-                      <Radio
-                        size="small"
-                        sx={{
-                          color: 'rgba(255,255,255,0.5)',
-                          '&.Mui-checked': { color: '#fff' },
-                          py: 0.25,
-                        }}
-                      />
-                    }
-                    label={<Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{opt}</Typography>}
-                  />
-                ))}
-              </RadioGroup>
-              <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1, opacity: isAnnual ? 0.3 : 1, pointerEvents: isAnnual ? 'none' : 'auto' }}>
-                <Slider
-                  value={isAnnual ? 1 : (localMonth ?? 1)}
-                  min={1}
-                  max={12}
-                  step={1}
-                  marks={sliderMarks}
-                  onChange={(_, val) => setLocalMonth(val)}
-                  onChangeCommitted={(_, val) => onMonthChange?.(val)}
-                  sx={{
-                    flex: 1,
-                    color: '#fff',
-                    mb: 1.5,
-                    '& .MuiSlider-markLabel': {
-                      color: 'rgba(255,255,255,0.7)',
-                      fontSize: '0.75rem',
-                    },
-                    '& .MuiSlider-markLabelActive': {
-                      color: '#fff',
-                      fontWeight: 'bold',
-                    },
-                  }}
+                <InfoOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            <RadioGroup
+              value={isAnnual ? 'annual' : 'monthly'}
+              onChange={(e) => handleAnnualToggle(e.target.value === 'annual')}
+              sx={{ flexShrink: 0 }}
+            >
+              {['Annual', 'Monthly'].map((opt) => (
+                <FormControlLabel
+                  key={opt}
+                  value={opt.toLowerCase()}
+                  control={
+                    <Radio
+                      size="small"
+                      sx={{
+                        color: 'rgba(255,255,255,0.5)',
+                        '&.Mui-checked': { color: '#fff' },
+                        py: 0.25,
+                      }}
+                    />
+                  }
+                  label={<Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{opt}</Typography>}
                 />
-                <Typography
-                  variant="body2"
-                  sx={{ color: '#fff', minWidth: 28, textAlign: 'right', fontWeight: 500, pl: 1, mb: 1.5 }}
-                >
-                  {isAnnual ? '' : currentMonthLabel}
-                </Typography>
-              </Box>
+              ))}
+            </RadioGroup>
+            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1, opacity: isAnnual ? 0.3 : 1, pointerEvents: isAnnual ? 'none' : 'auto' }}>
+              <Slider
+                value={isAnnual ? 1 : (localMonth ?? 1)}
+                min={1}
+                max={12}
+                step={1}
+                marks={sliderMarks}
+                onChange={(_, val) => setLocalMonth(val)}
+                onChangeCommitted={(_, val) => onMonthChange?.(val)}
+                sx={{
+                  flex: 1,
+                  color: '#fff',
+                  mb: 1.5,
+                  '& .MuiSlider-markLabel': {
+                    color: 'rgba(255,255,255,0.7)',
+                    fontSize: '0.75rem',
+                  },
+                  '& .MuiSlider-markLabelActive': {
+                    color: '#fff',
+                    fontWeight: 'bold',
+                  },
+                }}
+              />
+              <Typography
+                variant="body2"
+                sx={{ color: '#fff', minWidth: 28, textAlign: 'right', fontWeight: 500, pl: 1, mb: 1.5 }}
+              >
+                {isAnnual ? '' : currentMonthLabel}
+              </Typography>
             </Box>
           </Box>
 
