@@ -9,6 +9,7 @@ import tempfile
 import hashlib
 import os
 import traceback
+import time
 
 app = Flask(__name__)
 CORS(app)
@@ -23,6 +24,39 @@ DOWNLOADED_FILES = {}
 
 CACHE_DIR = "/var/cephaloview_data"
 os.makedirs(CACHE_DIR, exist_ok=True)
+
+
+def clean_old_storage():
+    # Read from environment variables, or fall back to defaults
+    target_dir = os.environ.get("STORAGE_DIR", "/var/cephaloview_data")
+    try:
+        days_threshold = int(os.environ.get("CLEANUP_DAYS", 30))
+    except ValueError:
+        days_threshold = 30  # Fallback if someone passes a non-integer string
+
+    print(f"Initializing storage cleanup at {target_dir} for files older than {days_threshold} days...")
+
+    now = time.time()
+    cutoff_time = now - (days_threshold * 24 * 60 * 60)
+
+    if not os.path.exists(target_dir):
+        print(f"Directory {target_dir} does not exist. Skipping cleanup.")
+        return
+
+    deleted_files = 0
+    for root, dirs, files in os.walk(target_dir):
+        for filename in files:
+            file_path = os.path.join(root, filename)
+            try:
+                file_mod_time = os.path.getmtime(file_path)
+                if file_mod_time < cutoff_time:
+                    os.remove(file_path)
+                    deleted_files += 1
+                    print(f"Deleted old file: {file_path}")
+            except Exception as e:
+                print(f"Failed to delete {file_path}. Reason: {e}")
+
+    print(f"Storage cleanup complete. Removed {deleted_files} files.")
 
 
 def get_url_lock(file_url):
@@ -388,6 +422,12 @@ def get_obs_global_max(entry):
 
 
 # routes
+
+@app.cli.command("clean-storage")
+def clean_storage_command():
+    """Flask command to trigger the storage cleanup logic."""
+    clean_old_storage()
+
 @app.route("/api/diversity-map", methods=["GET"])
 def diversity_map():
     file_url = request.args.get("file", type=str)

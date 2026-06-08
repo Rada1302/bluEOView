@@ -25,4 +25,8 @@ COPY . .
 EXPOSE 5000
 
 # Run the application using gunicorn
-CMD ["gunicorn", "--config", "gunicorn_config.py", "app:app"]
+# CMD ["gunicorn", "--config", "gunicorn_config.py", "app:app"]
+
+# Update to cleanup old storage using the entrypoint.sh script
+RUN chmod +x ./entrypoint.sh
+CMD ["./entrypoint.sh"]
