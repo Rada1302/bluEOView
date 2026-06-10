@@ -9,6 +9,7 @@ import requests
 import tempfile
 import hashlib
 import os
+import re
 import traceback
 import time
 
