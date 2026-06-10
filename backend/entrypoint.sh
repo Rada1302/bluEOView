@@ -7,10 +7,10 @@ flask --app app clean-storage
 # 1.1 Update netCDF file in the data dir with files on data.up.ethz.ch
 # wget option:
 # -4: ip4,  -r: recursive, -N:updates only, -np: no parent-dir
-# -nH: no sub-dir, -A: only *.nc files 
-cd data
-wget -4 -r -N -np -nH -nd -A nc https://data.up.ethz.ch/shared/Blueoview_data/
-cd ..
+# -nH: no sub-dir, -A: only *.nc files  -q: quite
+cd /var/cephaloview_data/
+wget -4 -r -N -np -nH -nd -A nc -q https://data.up.ethz.ch/shared/Blueoview_data/
+cd -
 
 # Only OK for developping/debugging
 # 2. Start the actual Flask app

@@ -4,6 +4,7 @@ import xarray as xr
 import numpy as np
 from threading import Lock, Thread
 from collections import defaultdict
+from urllib.parse import urlparse
 import requests
 import tempfile
 import hashlib
@@ -15,6 +16,8 @@ app = Flask(__name__)
 CORS(app)
 
 # caches
+#DEFAULT_DATA_URL="https://data.up.ethz.ch/shared/Blueoview_data"
+DEFAULT_DATA_URL = os.environ.get("DATA_URL", "https://data.up.ethz.ch/shared/Blueoview_data")
 DATASETS = {}
 DATASETS_LOCK = Lock()  # protects DATASETS dict only (fast)
 PER_URL_LOCKS = defaultdict(Lock)  # serialize work per-URL, not globally
@@ -22,29 +25,41 @@ PER_URL_LOCKS_GUARD = Lock()
 DOWNLOADED_FILES = {}
 
 
-CACHE_DIR = "/var/cephaloview_data"
+CACHE_DIR = os.environ.get("STORAGE_DIR", "/var/cephaloview_data")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
+def generate_label(filename):
+    """
+    Transforms a filename like:
+    'L3_plankton_species_diversity_from_occurrence_20260518.nc'
+    Into: 'Diversity projection based on occurrence'
+    """
+    # Remove extension and trailing date stamp (e.g., _20260518)
+    name_clean = re.sub(r'\.nc$', '', filename)
+    name_clean = re.sub(r'_\d{8}$', '', name_clean)
+
+    # Remove the generic prefix
+    name_clean = re.sub(r'^L\d+_plankton_species_', '', name_clean)
+
+    return name_clean.capitalize().replace('_',' ')
 
 def clean_old_storage():
-    # Read from environment variables, or fall back to defaults
-    target_dir = os.environ.get("STORAGE_DIR", "/var/cephaloview_data")
     try:
         days_threshold = int(os.environ.get("CLEANUP_DAYS", 30))
     except ValueError:
         days_threshold = 30  # Fallback if someone passes a non-integer string
 
-    print(f"Initializing storage cleanup at {target_dir} for files older than {days_threshold} days...")
+    print(f"Initializing storage cleanup at {CACHE_DIR} for files older than {days_threshold} days...")
 
     now = time.time()
     cutoff_time = now - (days_threshold * 24 * 60 * 60)
 
-    if not os.path.exists(target_dir):
-        print(f"Directory {target_dir} does not exist. Skipping cleanup.")
+    if not os.path.exists(CACHE_DIR):
+        print(f"Directory {CACHE_DIR} does not exist. Skipping cleanup.")
         return
 
     deleted_files = 0
-    for root, dirs, files in os.walk(target_dir):
+    for root, dirs, files in os.walk(CACHE_DIR):
         for filename in files:
             file_path = os.path.join(root, filename)
             try:
@@ -53,11 +68,16 @@ def clean_old_storage():
                     os.remove(file_path)
                     deleted_files += 1
                     print(f"Deleted old file: {file_path}")
+                else:
+                    file_url=os.path.join(DEFAULT_DATA_URL,filename)
+                    DOWNLOADED_FILES[file_url] = file_path
+                    print(f"Found cached netCDF source: \n   {file_path}")
             except Exception as e:
                 print(f"Failed to delete {file_path}. Reason: {e}")
 
     print(f"Storage cleanup complete. Removed {deleted_files} files.")
-
+    print("DOWNLOADED_FILES:")
+    print(DOWNLOADED_FILES)
 
 def get_url_lock(file_url):
     with PER_URL_LOCKS_GUARD:
@@ -67,11 +87,19 @@ def get_url_lock(file_url):
 # download with persistent cache
 def get_local_path(file_url):
     # in-memory hit
+    print(f"Checking cache for: {file_url}")
     cached = DOWNLOADED_FILES.get(file_url)
+    print(f"Cache request for \n{file_url} \nreturned: \n<{cached}>")
     if cached and os.path.exists(cached):
         return cached
 
     # on-disk hit (survives restarts)
+    filename = os.path.basename(urlparse(file_url).path)
+    stable_path = os.path.join(CACHE_DIR, filename)
+    if os.path.exists(stable_path) and os.path.getsize(stable_path) > 0:
+        DOWNLOADED_FILES[file_url] = stable_path
+        print(f"Disk cache hit: {stable_path}")
+        return stable_path
     h = hashlib.sha1(file_url.encode("utf-8")).hexdigest()
     stable_path = os.path.join(CACHE_DIR, f"{h}.nc")
     if os.path.exists(stable_path) and os.path.getsize(stable_path) > 0:
@@ -509,6 +537,33 @@ def diversity_map():
             "hasObs": obs_2d is not None,
         }
     )
+
+@app.route('/api/datasets', methods=['GET'])
+def get_datasets():
+    try:
+        # Make sure CACHE_DIR is defined above this
+        if not os.path.exists(CACHE_DIR):
+            return jsonify({"error": f"Directory path does not exist inside Docker: {CACHE_DIR}"}), 500
+            
+        
+        file_list = []
+        for filename in os.listdir(CACHE_DIR):
+            if filename.endswith('.nc'):
+                    file_list.append({
+                        "label": generate_label(filename), # Change this if your function has a different name
+                        "value": f"https://data.up.ethz.ch/shared/Blueoview_data/{filename}"
+                    })
+
+        return jsonify(file_list)
+
+    except Exception as e:
+        # This catches any other crash (like os.listdir failing) and sends the exact error to React
+        return jsonify({
+            "error": "Internal Flask Crash",
+            "python_error": str(e),
+            "type": str(type(e).__name__)
+        }), 500
+
 
 
 @app.route("/api/diversity-features", methods=["GET"])

@@ -5,9 +5,9 @@ import Footer from './components/Footer';
 import InfoModal from './components/InfoModal';
 import debounce from 'lodash/debounce';
 import './App.css';
-import { Box, Typography, Divider } from '@mui/material';
-import { BlueCloudLogo, DEFAULT_URLS, welcomeShortText, welcomeLongText } from './constants';
-import { Paper, Button } from '@mui/material';
+import { Box, Typography, Divider, CircularProgress } from '@mui/material';
+import { BlueCloudLogo, welcomeShortText, welcomeLongText } from './constants'; // Removed static DEFAULT_URLS
+import { Paper } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 
 const App = () => {
@@ -29,22 +29,57 @@ const App = () => {
   const [area, setArea] = useState(null);
   const [sharedZoom, setSharedZoom] = useState(null);
 
-  // URL loader state
-  const [netcdfUrlInput, setNetcdfUrlInput] = useState(DEFAULT_URLS[0].value);
-  const [loadedUrl, setLoadedUrl] = useState(DEFAULT_URLS[0].value);
-  const [selectedDefault, setSelectedDefault] = useState(DEFAULT_URLS[0].value);
+  // --- Dynamic URLs System ---
+  const [defaultUrls, setDefaultUrls] = useState([]); // Dynamic container replacing the static list
+  const [backendLoading, setBackendLoading] = useState(true);
+  const [backendError, setBackendError] = useState(null);
+
+  // URL loader state initialized to safe empty values
+  const [netcdfUrlInput, setNetcdfUrlInput] = useState('');
+  const [loadedUrl, setLoadedUrl] = useState('');
+  const [selectedDefault, setSelectedDefault] = useState('');
   const [customUrls, setCustomUrls] = useState([]);
+
+  // Fetch file directory array from Flask on app startup
+  useEffect(() => {
+    fetch('/api/datasets') // Update this with your actual Flask domain/port if needed
+      .then(res => {
+        if (!res.ok) throw new Error(`Server returned status ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (data && data.length > 0) {
+          setDefaultUrls(data);
+
+          // Seed the initial parameters with the very first file found in the directory
+          const initialFile = data[0].value;
+          setNetcdfUrlInput(initialFile);
+          setLoadedUrl(initialFile);
+          setSelectedDefault(initialFile);
+        } else {
+          throw new Error("No NetCDF datasets (.nc) found in the target directory.");
+        }
+      })
+      .catch(err => {
+        console.error("Error connecting to Flask directory API:", err);
+        setBackendError(err.message);
+      })
+      .finally(() => {
+        setBackendLoading(false);
+      });
+  }, []);
 
   const allUrls = useMemo(() => {
     const uniqueCustoms = customUrls.filter(
-      (url) => !DEFAULT_URLS.some((def) => def.value === url)
+      (url) => !defaultUrls.some((def) => def.value === url)
     );
 
     return [
-      ...DEFAULT_URLS,
+      ...defaultUrls,
       ...uniqueCustoms.map(url => ({ label: url, value: url }))
     ];
-  }, [customUrls]);
+  }, [customUrls, defaultUrls]); // Added defaultUrls dependency mapping
+  // ----------------------------
 
   const [featureOptions, setFeatureOptions] = useState([]);
   const [featuresLoading, setFeaturesLoading] = useState(false);
@@ -56,7 +91,6 @@ const App = () => {
   // Panel state
   const [panel, setPanel] = useState(() => ({ ...initialPanel }));
   const [debouncedMonth, setDebouncedMonth] = useState(initialPanel.month);
-
   const debouncedUpdateMonth = useMemo(
     () => debounce((v) => setDebouncedMonth(v), 500),
     []
@@ -73,7 +107,7 @@ const App = () => {
 
   // Fetch features whenever loadedUrl changes
   useEffect(() => {
-    if (!loadedUrl) return;
+    if (!loadedUrl) return; // Safely guards against firing before the Flask hook loads data
     let active = true;
 
     setFeatureOptions([]);
@@ -129,7 +163,7 @@ const App = () => {
 
     setLoadedUrl(trimmed);
 
-    const matchingDefault = DEFAULT_URLS.find(u => u.value === trimmed);
+    const matchingDefault = defaultUrls.find(u => u.value === trimmed);
     setSelectedDefault(matchingDefault?.value ?? '');
 
     setCustomUrls(prev => {
@@ -216,34 +250,45 @@ const App = () => {
         flexGrow: 1, display: 'flex', flexDirection: 'row', gap: 1, px: 1,
         '@media (max-width: 1000px)': { flexDirection: 'column' }
       }}>
-        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-          <DataPanel
-            panel={panel}
-            setPanel={setPanel}
-            debouncedMonth={debouncedMonth}
-            debouncedUpdateMonth={debouncedUpdateMonth}
-            setArea={setArea}
-            selectedArea={area}
-            onMonthChange={(v) => {
-              setPanel(prev => ({ ...prev, month: v }));
-              debouncedUpdateMonth(v);
-            }}
-            sharedZoom={sharedZoom}
-            onSharedZoomChange={setSharedZoom}
-            openInfoModal={openInfoModal}
-            netcdfUrl={loadedUrl}
-            featureOptions={featureOptions}
-            netcdfUrlInput={netcdfUrlInput}
-            setNetcdfUrlInput={setNetcdfUrlInput}
-            selectedDefault={selectedDefault}
-            setSelectedDefault={setSelectedDefault}
-            handleLoad={handleLoad}
-            featuresLoading={featuresLoading}
-            featuresError={featuresError}
-            allUrls={allUrls}
-            timeLongName={timeLongName}
-            varInfo={varInfo}
-          />
+        <Box sx={{ flexGrow: 1, minWidth: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          {backendLoading ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, color: 'white' }}>
+              <CircularProgress color="inherit" />
+              <Typography>Synchronizing dataset structure...</Typography>
+            </Box>
+          ) : backendError ? (
+            <Typography sx={{ color: '#ff6b6b', fontWeight: 'bold' }}>
+              Error establishing handshake with file manager: {backendError}
+            </Typography>
+          ) : (
+            <DataPanel
+              panel={panel}
+              setPanel={setPanel}
+              debouncedMonth={debouncedMonth}
+              debouncedUpdateMonth={debouncedUpdateMonth}
+              setArea={setArea}
+              selectedArea={area}
+              onMonthChange={(v) => {
+                setPanel(prev => ({ ...prev, month: v }));
+                debouncedUpdateMonth(v);
+              }}
+              sharedZoom={sharedZoom}
+              onSharedZoomChange={setSharedZoom}
+              openInfoModal={openInfoModal}
+              netcdfUrl={loadedUrl}
+              featureOptions={featureOptions}
+              netcdfUrlInput={netcdfUrlInput}
+              setNetcdfUrlInput={setNetcdfUrlInput}
+              selectedDefault={selectedDefault}
+              setSelectedDefault={setSelectedDefault}
+              handleLoad={handleLoad}
+              featuresLoading={featuresLoading}
+              featuresError={featuresError}
+              allUrls={allUrls}
+              timeLongName={timeLongName}
+              varInfo={varInfo}
+            />
+          )}
         </Box>
       </Box>
 
