@@ -10,6 +10,7 @@ import tempfile
 import hashlib
 import os
 import re
+from pathlib import Path
 import traceback
 import time
 
@@ -44,6 +45,35 @@ def generate_label(filename):
 
     return name_clean.capitalize().replace('_',' ')
 
+def delete_sha1_nc_files(target_directory):
+    # Base directory to search
+    base_dir = Path(target_directory)
+
+    # SHA-1 regex: exactly 40 hex characters (case-insensitive) followed by .nc
+    # ^ forces match at start, $ forces match at end
+    sha1_pattern = re.compile(r"^[0-9a-fA-F]{40}\.nc$")
+
+    # Counter for deleted files
+    deleted_count = 0
+
+    # Iterate through the directory
+    for file_path in base_dir.iterdir():
+        # Make sure it's a file, not a folder
+        if file_path.is_file():
+            # Check if the filename matches the SHA-1 pattern
+            if sha1_pattern.match(file_path.name):
+                try:
+                    # Unleash the delete command safely
+                    file_path.unlink()
+                    print(f"Deleted: {file_path.name}")
+                    deleted_count += 1
+                except Exception as e:
+                    print(f"Error deleting {file_path.name}: {e}")
+
+    print(f"\nTask complete. Total files removed: {deleted_count}")
+
+
+
 def clean_old_storage():
     try:
         days_threshold = int(os.environ.get("CLEANUP_DAYS", 30))
@@ -58,6 +88,9 @@ def clean_old_storage():
     if not os.path.exists(CACHE_DIR):
         print(f"Directory {CACHE_DIR} does not exist. Skipping cleanup.")
         return
+
+    # Delete all user-downloaded files, i.e., sha1-named files
+    delete_sha1_nc_files(CACHE_DIR)
 
     deleted_files = 0
     for root, dirs, files in os.walk(CACHE_DIR):
