@@ -11,7 +11,7 @@ services:
       - API_PORT=5000
       # - DATA_URL= https://data.up.ethz.ch/shared/Blueoview_data
       #  Storage cleanup settings
-      - STORAGE_DIR=/var/cephaloview_data/
+      # - STORAGE_DIR=/var/cephaloview_data/
       # - CLEANUP_DAYS=10
     working_dir: /app
     volumes:

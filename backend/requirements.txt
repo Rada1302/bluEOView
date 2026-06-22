@@ -1,41 +1,41 @@
 # Core web framework
-Flask==3.1.3
-Flask-Cors==4.0.1
-Werkzeug==3.1.7
+Flask>=3.1.3
+Flask-Cors>=4.0.1
+Werkzeug>=3.1.7
 
 # Scientific stack
-numpy==2.4.4
-xarray==2025.12.0
-dask==2025.12.0
+numpy>=2.4.4
+xarray>=2025.12.0
+dask>=2025.12.0
 
 # NetCDF I/O backends
-netCDF4==1.7.4
+netCDF4>=1.7.4
 h5netcdf>=1.8.1
 h5py>=3.8.0
-cftime==1.6.4
+cftime>=1.6.4
 
 # HTTP downloads
 requests>=2.32.3
-certifi==2024.8.30
+certifi>=2024.8.30
 
 # Dask internals
-cloudpickle==3.0.0
-fsspec==2025.12.0
-locket==1.0.0
-partd==1.4.1
-toolz==0.12.1
+cloudpickle>=3.0.0
+fsspec>=2025.12.0
+locket>=1.0.0
+partd>=1.4.1
+toolz>=0.12.1
 
 # Updated General Python stuff
 blinker>=1.9.0
-click==8.1.7
-itsdangerous==2.2.0
-Jinja2==3.1.4
-MarkupSafe==2.1.5
-packaging==24.1
-python-dateutil==2.9.0.post0
-PyYAML==6.0.2
-six==1.16.0
-tzdata==2024.1
-zipp==3.20.1
-importlib_metadata==8.4.0
-importlib_resources==6.4.4
+click>=8.1.7
+itsdangerous>=2.2.0
+Jinja2>=3.1.4
+MarkupSafe>=2.1.5
+packaging>=24.1
+python-dateutil>=2.9.0.post0
+PyYAML>=6.0.2
+six>=1.16.0
+tzdata>=2024.1
+zipp>=3.20.1
+importlib_metadata>=8.4.0
+importlib_resources>=6.4.4
