@@ -51,8 +51,9 @@ const App = () => {
         if (data && data.length > 0) {
           setDefaultUrls(data);
 
-          // Seed the initial parameters with the very first file found in the directory
-          const initialFile = data[0].value;
+          // Seed the initial parameters with the 3rd first file found in the directory
+          // since by alpha-numerical ordering this is the diversity by occurrance file.
+          const initialFile = data[2].value;
           setNetcdfUrlInput(initialFile);
           setLoadedUrl(initialFile);
           setSelectedDefault(initialFile);

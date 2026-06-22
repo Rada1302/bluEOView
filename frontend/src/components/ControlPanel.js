@@ -22,6 +22,7 @@ import {
   DialogActions,
   Radio,
   RadioGroup,
+  Link,
   FormControlLabel,
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -32,6 +33,9 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import AddIcon from '@mui/icons-material/Add';
 import { MONTH_OPTIONS, aboutGeneration } from '../constants';
+import LaunchIcon from '@mui/icons-material/Launch'; // Optional: adds a nice "external link" mini icon
+import WormsModal from './WormsModal'; // Import the modal we just made
+
 
 const glassSelect = {
   backgroundColor: 'rgba(255,255,255,0.12)',
@@ -86,6 +90,7 @@ const ADD_NEW_SENTINEL = '__add_new__';
 
 const UrlControl = ({ netcdfUrl, selectedDefault, triggerLoad, allUrls }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [wormsPopupOpen, setWormsPopupOpen] = useState(false);
   const [draftUrl, setDraftUrl] = useState('');
   const [sessionUrls, setSessionUrls] = useState(() => allUrls);
 
@@ -194,7 +199,6 @@ const UrlControl = ({ netcdfUrl, selectedDefault, triggerLoad, allUrls }) => {
     </Box>
   );
 };
-
 const ControlPanel = ({
   feature, featureOptions = [], onFeatureChange, openInfoModal,
   month, onMonthChange,
@@ -209,6 +213,8 @@ const ControlPanel = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(true);
   const [localMonth, setLocalMonth] = useState(month);
+  const [wormsPopupOpen, setWormsPopupOpen] = useState(false); // 🌟 This is the master state control!
+  const [wormsClickPos, setWormsClickPos] = useState(null);
 
   useEffect(() => { setLocalMonth(month); }, [month]);
 
@@ -219,6 +225,44 @@ const ControlPanel = ({
       pendingUrl.current = null;
     }
   }, [netcdfUrl]);
+
+// FIXED: Changed to an <a> tag and swapped onClick out for onMouseDown!
+const SpeciesDisplay = ({ currentSpecies }) => {
+  const wormsId = currentSpecies?.target_id;
+  const speciesName = currentSpecies?.label;
+
+  if (!wormsId) return null;
+
+  return (
+    <a
+      role="button"
+       // color: '#64b5f6',
+       // textDecoration: 'underline',
+      style={{
+        color: '#fff',
+        marginLeft: '12px',
+        cursor: 'pointer',
+        fontSize: '0.9em',
+        userSelect: 'none'
+      }}
+      // 🌟 THE MASTER KEY: Kept exactly intact, just recording coordinates!
+      onMouseDown={(e) => {
+        e.stopPropagation(); // Stops the dropdown container from catching the click
+        e.preventDefault();  // Prevents focus shifts that trigger menu layouts
+        
+        // Grab the exact window coordinates before any event bubbling shifts them
+        setWormsClickPos({ x: e.clientX, y: e.clientY }); 
+      }}
+    >
+    <strong>&#9432;</strong> 
+    </a>
+  );
+};
+
+    // {`${wormsId}`}
+
+
+// To match this, your updated <
 
   const triggerLoad = React.useCallback((url) => {
     pendingUrl.current = url;
@@ -247,253 +291,259 @@ const ControlPanel = ({
   };
 
   return (
-    <Box sx={{
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'rgba(0,0,0,0.25)',
-      backdropFilter: 'blur(8px)',
-      borderRadius: 1,
-      border: '1px solid rgba(255,255,255,0.15)',
-      overflow: 'hidden',
-    }}>
+    <>
       <Box sx={{
-        display: 'flex',
-        alignItems: 'center',
-        px: 2,
-        py: 1,
-        cursor: 'pointer',
-        borderBottom: open ? '1px solid rgba(255,255,255,0.08)' : 'none',
-        '&:hover': { backgroundColor: 'rgba(255,255,255,0.04)' },
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0,0,0,0.25)',
+        backdropFilter: 'blur(8px)',
+        borderRadius: 1,
+        border: '1px solid rgba(255,255,255,0.15)',
+        overflow: 'hidden',
       }}>
-        <IconButton onClick={() => setOpen(v => !v)} sx={{ color: 'white', pr: 3 }}>
-          {open ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-        </IconButton>
-        <Typography sx={{ fontSize: 19 }}>Control Panel</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
-          <Button
-            size="small"
-            onClick={onToggleStd}
-            variant="outlined"
-            sx={{
-              color: '#fff',
-              borderColor: 'rgba(255,255,255,0.25)',
-              backgroundColor: showStd ? 'rgba(60,80,120,0.85)' : 'rgba(30,30,30,0.75)',
-              backdropFilter: 'blur(4px)',
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: '0.04em',
-              py: '9px',
-              '&:hover': { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: showStd ? 'rgba(70,90,140,0.9)' : 'rgba(50,50,50,0.85)' },
-            }}
-          >
-            {showStd ? '✕ Hide SD' : '+ Show SD'}
-          </Button>
-          {hasObs && (
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          px: 2,
+          py: 1,
+          cursor: 'pointer',
+          borderBottom: open ? '1px solid rgba(255,255,255,0.08)' : 'none',
+          '&:hover': { backgroundColor: 'rgba(255,255,255,0.04)' },
+        }}>
+          <IconButton onClick={() => setOpen(v => !v)} sx={{ color: 'white', pr: 3 }}>
+            {open ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          </IconButton>
+          <Typography sx={{ fontSize: 19 }}>Control Panel</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
             <Button
               size="small"
-              onClick={onToggleObs}
+              onClick={onToggleStd}
               variant="outlined"
               sx={{
                 color: '#fff',
                 borderColor: 'rgba(255,255,255,0.25)',
-                backgroundColor: showObs ? 'rgba(60,80,120,0.85)' : 'rgba(30,30,30,0.75)',
+                backgroundColor: showStd ? 'rgba(60,80,120,0.85)' : 'rgba(30,30,30,0.75)',
                 backdropFilter: 'blur(4px)',
                 fontSize: 11,
                 fontWeight: 600,
                 letterSpacing: '0.04em',
                 py: '9px',
-                '&:hover': { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: showObs ? 'rgba(70,90,140,0.9)' : 'rgba(50,50,50,0.85)' },
+                '&:hover': { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: showStd ? 'rgba(70,90,140,0.9)' : 'rgba(50,50,50,0.85)' },
               }}
             >
-              {showObs ? '✕ Hide Obs' : '+ Show Obs'}
+              {showStd ? '✕ Hide SD' : '+ Show SD'}
             </Button>
-          )}
-          <ToggleButtonGroup
-            value={view}
-            exclusive
-            size="small"
-            onChange={(_, val) => { if (val) onViewChange?.(val); }}
-            sx={{ ...toggleGroupSx }}
-          >
-            <ToggleButton value="map"><MapIcon sx={{ fontSize: 16, mr: 0.5 }} />Map</ToggleButton>
-            <ToggleButton value="globe"><PublicIcon sx={{ fontSize: 16, mr: 0.5 }} />Globe</ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
-      </Box>
-
-      <Collapse in={open}>
-        <Box sx={{ px: 2, py: 1.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Typography sx={{ fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>{aboutGeneration}</Typography>
-
-          {/* Source */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <RowLabel>Source</RowLabel>
-            <UrlControl
-              netcdfUrl={netcdfUrl}
-              selectedDefault={selectedDefault}
-              triggerLoad={triggerLoad}
-              allUrls={allUrls}
-            />
-          </Box>
-
-          {/* Variable */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', width: 110, flexShrink: 0 }}>
-              <Typography sx={{ color: 'white' }}>Variable</Typography>
-              <IconButton
+            {hasObs && (
+              <Button
                 size="small"
-                sx={{ color: '#fff', ml: 0.5, p: 0.25 }}
-                onClick={() => {
-                  const found = featureOptions.find(f => f.value === feature);
-                  const parts = [];
-                  if (found?.standard_name) parts.push(found.standard_name);
-                  if (found?.long_name) parts.push(found.long_name);
-                  openInfoModal?.('Variable', parts.join('\n\n') || 'No description available.');
+                onClick={onToggleObs}
+                variant="outlined"
+                sx={{
+                  color: '#fff',
+                  borderColor: 'rgba(255,255,255,0.25)',
+                  backgroundColor: showObs ? 'rgba(60,80,120,0.85)' : 'rgba(30,30,30,0.75)',
+                  backdropFilter: 'blur(4px)',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  py: '9px',
+                  '&:hover': { borderColor: 'rgba(255,255,255,0.4)', backgroundColor: showObs ? 'rgba(70,90,140,0.9)' : 'rgba(50,50,50,0.85)' },
                 }}
               >
-                <InfoOutlinedIcon fontSize="small" />
-              </IconButton>
+                {showObs ? '✕ Hide Obs' : '+ Show Obs'}
+              </Button>
+            )}
+            <ToggleButtonGroup
+              value={view}
+              exclusive
+              size="small"
+              onChange={(_, val) => { if (val) onViewChange?.(val); }}
+              sx={{ ...toggleGroupSx }}
+            >
+              <ToggleButton value="map"><MapIcon sx={{ fontSize: 16, mr: 0.5 }} />Map</ToggleButton>
+              <ToggleButton value="globe"><PublicIcon sx={{ fontSize: 16, mr: 0.5 }} />Globe</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+        </Box>
+
+        <Collapse in={open}>
+          <Box sx={{ px: 2, py: 1.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography sx={{ fontSize: 16, color: 'rgba(255,255,255,0.7)' }}>{aboutGeneration}</Typography>
+
+            {/* Source */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <RowLabel>Source</RowLabel>
+              <UrlControl
+                netcdfUrl={netcdfUrl}
+                selectedDefault={selectedDefault}
+                triggerLoad={triggerLoad}
+                allUrls={allUrls}
+              />
             </Box>
-            {featuresReady ? (
-              <FormControl size="small" sx={{ ...glassSelect, flex: 1, borderRadius: 2 }}>
-                <Select
-                  value={feature}
-                  onChange={onFeatureChange}
-                  onClose={() => setSearchTerm('')}
-                  MenuProps={{ ...menuProps, autoFocus: false }}
-                  renderValue={(value) => {
-                    const found = featureOptions.find(f => f.value === value);
-                    if (!found) return <span style={{ opacity: 0.5 }}>Select a variable…</span>;
-                    return (
-                      <span>
-                        {found.label}
-                        {found.target_id != null && (
-                          <span style={{ marginLeft: 6, opacity: 0.45, fontSize: '0.82em', fontFamily: 'monospace' }}>
-                            [{found.target_id}]
-                          </span>
-                        )}
-                      </span>
-                    );
+
+            {/* Variable */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', width: 110, flexShrink: 0 }}>
+                <Typography sx={{ color: 'white' }}>Variable</Typography>
+                <IconButton
+                  size="small"
+                  sx={{ color: '#fff', ml: 0.5, p: 0.25 }}
+                  onClick={() => {
+                    const found = featureOptions.find(f => f.value === feature);
+                    const parts = [];
+                    if (found?.standard_name) parts.push(found.standard_name);
+                    if (found?.long_name) parts.push(found.long_name);
+                    openInfoModal?.('Variable', parts.join('\n\n') || 'No description available.');
                   }}
                 >
-                  <ListSubheader sx={{ bgcolor: 'rgb(45, 45, 45)', p: 1 }}>
-                    <TextField
-                      size="small"
-                      autoFocus
-                      placeholder="Search name..."
-                      fullWidth
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <SearchIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.5)' }} />
-                          </InputAdornment>
-                        ),
-                      }}
-                      sx={{
-                        '& .MuiInputBase-input': { color: '#fff', fontSize: '0.85rem' },
-                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
-                      }}
-                    />
-                  </ListSubheader>
+                  <InfoOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              {featuresReady ? (
+                <FormControl size="small" sx={{ ...glassSelect, flex: 1, borderRadius: 2 }}>
+                  <Select
+                    value={feature}
+                    onChange={onFeatureChange}
+                    onClose={() => setSearchTerm('')}
+                    MenuProps={{ ...menuProps, autoFocus: false }}
+                    renderValue={(value) => {
+                      const found = featureOptions.find(f => f.value === value);
+                      if (!found) return <span style={{ opacity: 0.5 }}>Select a variable…</span>;
+                      return (
+                        <span>
+                          {found.label}
+                          {found && SpeciesDisplay({ currentSpecies: found })}
+                        </span>
+                      );
+                    }}
+                  >
+                    <ListSubheader sx={{ bgcolor: 'rgb(45, 45, 45)', p: 1 }}>
+                      <TextField
+                        size="small"
+                        autoFocus
+                        placeholder="Search name..."
+                        fullWidth
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <SearchIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.5)' }} />
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{
+                          '& .MuiInputBase-input': { color: '#fff', fontSize: '0.85rem' },
+                          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
+                        }}
+                      />
+                    </ListSubheader>
 
-                  {displayedOptions.length > 0
-                    ? displayedOptions.map((opt) => (
-                      <MenuItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                        {opt.target_id != null && (
-                          <Typography component="span" sx={{ ml: 1, color: 'rgba(255,255,255,0.4)', fontSize: '0.78em', fontFamily: 'monospace' }}>
-                            [{opt.target_id}]
-                          </Typography>
-                        )}
-                      </MenuItem>
-                    ))
-                    : <MenuItem disabled>No matches found</MenuItem>
-                  }
-                </Select>
-              </FormControl>
-            ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {featuresLoading && <CircularProgress size={14} sx={{ color: 'rgba(255,255,255,0.5)' }} />}
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                  {featuresLoading ? 'Loading…' : 'No variable'}
+                    {displayedOptions.length > 0
+                      ? displayedOptions.map((opt) => (
+                        <MenuItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                          {opt.target_id != null && (
+                            <Typography component="span" sx={{ ml: 1, color: 'rgba(255,255,255,0.4)', fontSize: '0.78em', fontFamily: 'monospace' }}>
+                              [{opt.target_id}]
+                            </Typography>
+                          )}
+                        </MenuItem>
+                      ))
+                      : <MenuItem disabled>No matches found</MenuItem>
+                    }
+                  </Select>
+                </FormControl>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {featuresLoading && <CircularProgress size={14} sx={{ color: 'rgba(255,255,255,0.5)' }} />}
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                    {featuresLoading ? 'Loading…' : 'No variable'}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+
+            {/* Time Frame */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                <Typography sx={{ color: 'white', whiteSpace: 'nowrap' }}>Time Frame</Typography>
+                <IconButton
+                  size="small"
+                  sx={{ color: '#fff', ml: 0.5, p: 0.25 }}
+                  onClick={() => openInfoModal?.('Time Frame', timeLongName || 'No description available.')}
+                >
+                  <InfoOutlinedIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              <RadioGroup
+                value={isAnnual ? 'annual' : 'monthly'}
+                onChange={(e) => handleAnnualToggle(e.target.value === 'annual')}
+                sx={{ flexShrink: 0 }}
+              >
+                {['Annual', 'Monthly'].map((opt) => (
+                  <FormControlLabel
+                    key={opt}
+                    value={opt.toLowerCase()}
+                    control={
+                      <Radio
+                        size="small"
+                        sx={{
+                          color: 'rgba(255,255,255,0.5)',
+                          '&.Mui-checked': { color: '#fff' },
+                          py: 0.25,
+                        }}
+                      />
+                    }
+                    label={<Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{opt}</Typography>}
+                  />
+                ))}
+              </RadioGroup>
+              <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1, opacity: isAnnual ? 0.3 : 1, pointerEvents: isAnnual ? 'none' : 'auto' }}>
+                <Slider
+                  value={isAnnual ? 1 : (localMonth ?? 1)}
+                  min={1}
+                  max={12}
+                  step={1}
+                  marks={sliderMarks}
+                  onChange={(_, val) => setLocalMonth(val)}
+                  onChangeCommitted={(_, val) => onMonthChange?.(val)}
+                  sx={{
+                    flex: 1,
+                    color: '#fff',
+                    mb: 1.5,
+                    '& .MuiSlider-markLabel': {
+                      color: 'rgba(255,255,255,0.7)',
+                      fontSize: '0.75rem',
+                    },
+                    '& .MuiSlider-markLabelActive': {
+                      color: '#fff',
+                      fontWeight: 'bold',
+                    },
+                  }}
+                />
+                <Typography
+                  variant="body2"
+                  sx={{ color: '#fff', minWidth: 28, textAlign: 'right', fontWeight: 500, pl: 1, mb: 1.5 }}
+                >
+                  {isAnnual ? '' : currentMonthLabel}
                 </Typography>
               </Box>
-            )}
-          </Box>
-
-          {/* Time Frame */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-              <Typography sx={{ color: 'white', whiteSpace: 'nowrap' }}>Time Frame</Typography>
-              <IconButton
-                size="small"
-                sx={{ color: '#fff', ml: 0.5, p: 0.25 }}
-                onClick={() => openInfoModal?.('Time Frame', timeLongName || 'No description available.')}
-              >
-                <InfoOutlinedIcon fontSize="small" />
-              </IconButton>
             </Box>
-            <RadioGroup
-              value={isAnnual ? 'annual' : 'monthly'}
-              onChange={(e) => handleAnnualToggle(e.target.value === 'annual')}
-              sx={{ flexShrink: 0 }}
-            >
-              {['Annual', 'Monthly'].map((opt) => (
-                <FormControlLabel
-                  key={opt}
-                  value={opt.toLowerCase()}
-                  control={
-                    <Radio
-                      size="small"
-                      sx={{
-                        color: 'rgba(255,255,255,0.5)',
-                        '&.Mui-checked': { color: '#fff' },
-                        py: 0.25,
-                      }}
-                    />
-                  }
-                  label={<Typography sx={{ color: '#fff', fontSize: '0.85rem' }}>{opt}</Typography>}
-                />
-              ))}
-            </RadioGroup>
-            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1, opacity: isAnnual ? 0.3 : 1, pointerEvents: isAnnual ? 'none' : 'auto' }}>
-              <Slider
-                value={isAnnual ? 1 : (localMonth ?? 1)}
-                min={1}
-                max={12}
-                step={1}
-                marks={sliderMarks}
-                onChange={(_, val) => setLocalMonth(val)}
-                onChangeCommitted={(_, val) => onMonthChange?.(val)}
-                sx={{
-                  flex: 1,
-                  color: '#fff',
-                  mb: 1.5,
-                  '& .MuiSlider-markLabel': {
-                    color: 'rgba(255,255,255,0.7)',
-                    fontSize: '0.75rem',
-                  },
-                  '& .MuiSlider-markLabelActive': {
-                    color: '#fff',
-                    fontWeight: 'bold',
-                  },
-                }}
-              />
-              <Typography
-                variant="body2"
-                sx={{ color: '#fff', minWidth: 28, textAlign: 'right', fontWeight: 500, pl: 1, mb: 1.5 }}
-              >
-                {isAnnual ? '' : currentMonthLabel}
-              </Typography>
-            </Box>
-          </Box>
 
-        </Box>
-      </Collapse>
-    </Box>
+          </Box>
+        </Collapse>
+      </Box>
+\
+      <WormsModal 
+        open={Boolean(wormsClickPos)} // Pass your state tracking coordinate here
+        clickPosition={wormsClickPos} // Send coordinate numbers right down to it
+        onClose={() => setWormsClickPos(null)} 
+        wormsId={featureOptions.find(f => f.value === feature)?.target_id}
+        speciesName={featureOptions.find(f => f.value === feature)?.label}
+      />
+    </>
   );
 };
 
