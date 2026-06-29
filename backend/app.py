@@ -14,6 +14,9 @@ from pathlib import Path
 import traceback
 import time
 
+# for SpeciesImagePopup
+from bs4 import BeautifulSoup
+
 app = Flask(__name__)
 CORS(app)
 
@@ -29,6 +32,52 @@ DOWNLOADED_FILES = {}
 
 CACHE_DIR = os.environ.get("STORAGE_DIR", "/var/cephaloview_data")
 os.makedirs(CACHE_DIR, exist_ok=True)
+
+@app.route('/api/species-image/<int:aphia_id>', methods=['GET'])
+def get_species_image(aphia_id):
+    # Construct the canonical WoRMS taxon page URL using the AphiaID
+    worms_url = f"https://www.marinespecies.org/aphia.php?p=taxdetails&id={aphia_id}"
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+
+    try:
+        # 1. Fetch the species page content from WoRMS on the server-side
+        response = requests.get(worms_url, headers=headers, timeout=5)
+        if response.status_code != 200:
+            return jsonify({"has_image": False, "image_url": None}), 200
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # 2. Look for an image on the webpage. 
+        # WoRMS wraps species thumbnails in links matching 'p=image&id=...' 
+        image_link = soup.find('a', href=re.compile(r'p=image&id=\d+'))
+
+        if image_link and image_link.find('img'):
+            thumb_img = image_link.find('img')
+            thumb_src = thumb_img.get('src', '') # looks like: thumbs/204115_acartia-tonsa.png
+
+            if thumb_src:
+                # Ensure it maps properly to the verified CDN structure
+                # Clean up relative path markers if any exist
+                clean_path = thumb_src.replace('../', '').lstrip('/')
+                full_image_url = f"https://images.marinespecies.org/{clean_path}?w=700"
+
+                return jsonify({
+                    "has_image": True,
+                    "image_url": full_image_url
+                })
+
+        # If no image links were found in the HTML structure
+        return jsonify({"has_image": False, "image_url": None})
+
+    except Exception as e:
+        print(f"Error extracting WoRMS image: {e}")
+        return jsonify({"has_image": False, "image_url": None, "error": str(e)}), 500
+
+
+
 
 def generate_label(filename):
     """
@@ -488,7 +537,8 @@ def get_obs_global_max(entry):
 @app.cli.command("clean-storage")
 def clean_storage_command():
     """Flask command to trigger the storage cleanup logic."""
-    clean_old_storage()
+    # clean_old_storage()
+    delete_sha1_nc_files(CACHE_DIR)
 
 @app.route("/api/diversity-map", methods=["GET"])
 def diversity_map():
