@@ -17,6 +17,7 @@ cftime>=1.6.4
 # HTTP downloads
 requests>=2.32.3
 certifi>=2024.8.30
+beautifulsoup4>=4.15.0
 
 # Dask internals
 cloudpickle>=3.0.0
