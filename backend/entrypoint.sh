@@ -8,9 +8,10 @@ flask --app app clean-storage
 # wget option:
 # -4: ip4,  -r: recursive, -N:updates only, -np: no parent-dir
 # -nH: no sub-dir, -A: only *.nc files  -q: quite
-cd /var/cephaloview_data/
-wget -4 -r -N -np -nH -nd -A nc -q https://data.up.ethz.ch/shared/Blueoview_data/
-cd -
+# -nd: do not create a hierarchy of directories 
+# -P: target directory to download to
+# wget -4 -r -N -np -nH -nd -A nc -q -P /var/cephaloview_data/ https://data.up.ethz.ch/shared/Blueoview_data/
+wget -4 -r -N -np -nH -nd -A nc -nv -P /var/cephaloview_data/ https://data.up.ethz.ch/shared/Blueoview_data/
 
 # Only OK for developping/debugging
 # 2. Start the actual Flask app
